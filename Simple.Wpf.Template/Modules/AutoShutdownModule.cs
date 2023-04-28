@@ -16,6 +16,7 @@ public sealed class AutoShutdownModule : BaseModule
 
     public AutoShutdownModule()
     {
+        return; // disabled
         Logger.Info(() => "Begin");
 
         var configurationService = Bootstrapper.Resolve<IConfigurationService>();

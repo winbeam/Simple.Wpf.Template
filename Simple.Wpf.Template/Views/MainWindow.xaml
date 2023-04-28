@@ -7,7 +7,7 @@
                  xmlns:ip="http://metro.mahapps.com/winfx/xaml/iconpacks"
                  xmlns:vm="clr-namespace:Simple.Wpf.Template.ViewModels"
                  mc:Ignorable="d"
-                 Title="Simple.Wpf.Template"
+                 Title="HomeTaxAuto"
                  RenderOptions.ClearTypeHint="Enabled"
                  ResizeMode="CanResizeWithGrip"
                  TextOptions.TextFormattingMode="Display"
@@ -76,21 +76,24 @@
                     Orientation="Horizontal">
 
             <Button Margin="0,0,8,0"
-                    Content="Throw Exception from UI Thread"
+                    Content="HomeTax Login Page"
                     HorizontalAlignment="Left"
-                    Command="{Binding Path=ThrowFromUiThreadCommand, Mode=OneWay}"
+                    Command="{Binding Path=HomeTaxLoginPageCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
 
             <Button Margin="0,0,8,0"
-                    Content="Throw Exception from Task"
+                    Content="Income Tax Page"
                     HorizontalAlignment="Left"
-                    Command="{Binding Path=ThrowFromTaskCommand, Mode=OneWay}"
+                    Command="{Binding Path=HomeTaxIncomeTaxPageCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
 
-            <Button Content="Throw Exception from Rx"
+            <Button Margin="0,0,8,0"
+                    Content="Test"
                     HorizontalAlignment="Left"
-                    Command="{Binding Path=ThrowFromRxCommand, Mode=OneWay}"
+                    Command="{Binding Path=HomeTaxTestCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
+
+
 
         </StackPanel>
 
