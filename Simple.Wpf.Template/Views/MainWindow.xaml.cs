@@ -11,6 +11,7 @@ using ControlzEx.Theming;
 using MahApps.Metro.Controls.Dialogs;
 using NLog;
 using Simple.Wpf.Template.Extensions;
+using Simple.Wpf.Template.Helpers;
 using Simple.Wpf.Template.Services;
 
 namespace Simple.Wpf.Template.Views;
@@ -32,6 +33,7 @@ public partial class MainWindow
 
     public MainWindow(IDialogService dialogService, ISchedulers schedulers)
     {
+        ApplicationCleanup.Register(this);
         _schedulers = schedulers;
         _disposable = new CompositeDisposable();
 

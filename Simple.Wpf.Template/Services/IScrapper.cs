@@ -8,6 +8,6 @@ namespace Simple.Wpf.Template.Services
         Task GoHomeTaxLogin();
         Task GoGlobalIncomeTax();
         Task Test();
-        void Quit();
+        Task Quit();
     }
 }

@@ -11,30 +11,49 @@ using System.Threading;
 using Simple.Wpf.Template.ViewModels;
 using JetBrains.Annotations;
 using NLog;
+using NLog.Targets;
+using System.Diagnostics;
+using System.Windows;
+using System.IO;
+using Simple.Wpf.Template.Modules;
+using System.Reactive.Disposables;
+using Simple.Wpf.Template.Helpers;
 
 namespace Simple.Wpf.Template.Services;
 
 
 [UsedImplicitly]
-public class Scrapper : IScrapper, IRegisteredService
+public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegisteredService
 {
     private IWebDriver _webDriver;
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
+    readonly string _hometaxAddress = "https://hometax.go.kr";
+    readonly string _globalIncomeAddress = "https://hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml&tmIdx=4&tm2lIdx=0405000000&tm3lIdx=0405040000";
+
     public Scrapper()
     {
         _logger.Log(NLog.LogLevel.Info, "Scrapper Started");
-
-
+        ApplicationCleanup.RegisterForShutdown(Quit);
     }
+        
+    public async Task Quit()
+    {
+        await Task.Run(() =>
+        {
+            if (_webDriver is null)
+                return;
 
-    ~Scrapper()
-    {
-        Quit();
-    }
-    public void Quit()
-    {
-        _webDriver.Quit();
+            _webDriver.Quit();
+            return;
+            // driver가 사용한 모든 창 핸들러를 닫습니다.
+            foreach (string windowHandle in _webDriver.WindowHandles)
+            {
+                _webDriver.SwitchTo().Window(windowHandle);
+                _webDriver.Close();
+            }
+        });
+        
     }
 
     void SetDriver()
@@ -54,7 +73,12 @@ public class Scrapper : IScrapper, IRegisteredService
         }
         catch (WebDriverException ex)
         {
+            _logger.Error($"{ex}");
             throw;
+        }
+        catch(Exception ex)
+        {
+            _logger.Error($"{ex}");
         }
 
     }
@@ -66,43 +90,6 @@ public class Scrapper : IScrapper, IRegisteredService
         var aa = _webDriver.Title.Contains("Google");
     }
 
-    void Tries(Action work, int delay = 500, int tryCount = 2)
-    {
-        for (int count = 0; count < tryCount; count++)
-        {
-            try
-            {
-                Thread.Sleep(delay);
-                work();
-                return;
-            }
-            catch
-            {
-            }
-        }
-
-    }
-    public void AuthRequest()
-    {
-
-
-        Tries(() =>
-        {
-            _webDriver.FindElement(By.Id("oacx-request-btn-pc")).Click();
-
-        });
-    }
-
-    public void AuthRequestConfirmed()
-    {
-
-        Tries(() =>
-        {
-            // 인증 완료
-            var ok = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div.standby > div > button.basic.sky.w70"));
-            ok.Click();
-        }, 200, 1);
-    }
     public async Task Test()
     {
         var aa1 = _webDriver.Manage;
@@ -140,20 +127,22 @@ public class Scrapper : IScrapper, IRegisteredService
             SetDriver();
 
             _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(1);
-            _webDriver.Navigate().GoToUrl("https://hometax.go.kr");
+            _webDriver.Navigate().GoToUrl(_hometaxAddress);
 
             GoSimpleAuth();
             FillPersonalInfo();
+            ClosePopups();
 
         });
 
+
     }
 
-    public async Task GoGlobalIncomeTax()
+     public async Task GoGlobalIncomeTax()
     {
         await Task.Run(() =>
         {
-            AuthRequestConfirmed();
+            AuthRequestConfirme();
 
 #if false
             Tries(() =>
@@ -179,12 +168,15 @@ public class Scrapper : IScrapper, IRegisteredService
 #endif
             // 종합스득세 신고 페이지
             Thread.Sleep(200);
-            _webDriver.Navigate().GoToUrl("https://hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml&tmIdx=4&tm2lIdx=0405000000&tm3lIdx=0405040000");
 
+            _webDriver.Navigate().GoToUrl(_globalIncomeAddress);
+
+            // 종합소득 클릭
             var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
             _webDriver.SwitchTo().Frame(paymentPageIframe);
-
             _webDriver.FindElement(By.Id("group14455")).Click();
+
+
         });
 
     }
@@ -216,14 +208,46 @@ public class Scrapper : IScrapper, IRegisteredService
             var item2 = _webDriver.FindElement(By.Id("anchor23"));
             item2.Click();
         });
-        var aa1 = _webDriver.Manage;
-        var aa2 = _webDriver.PageSource;
-        var aa3 = _webDriver.CurrentWindowHandle;
-        var aa4 = _webDriver.Url;
-        var aa5 = _webDriver.WindowHandles;
-        var aa6 = _webDriver.Title;
     }
 
+    void Tries(Action work, int delay = 500, int tryCount = 2)
+    {
+        for (int count = 0; count < tryCount; count++)
+        {
+            try
+            {
+                Thread.Sleep(delay);
+                work();
+                return;
+            }
+            catch(Exception e)
+            {
+                _logger.Error($"{e}");
+            }
+        }
+
+    }
+    public void AuthRequest()
+    {
+
+
+        Tries(() =>
+        {
+            _webDriver.FindElement(By.Id("oacx-request-btn-pc")).Click();
+
+        });
+    }
+
+    public void AuthRequestConfirme()
+    {
+
+        Tries(() =>
+        {
+            // 인증 완료
+            var ok = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div.standby > div > button.basic.sky.w70"));
+            ok.Click();
+        }, 200, 1);
+    }
     public void FillPersonalInfo()
     {
 
@@ -270,82 +294,85 @@ public class Scrapper : IScrapper, IRegisteredService
             }
         }, 0);
     }
-    public void GoHomeTaxLogin2()
+    void ClosePopups()
     {
-        SetDriver();
-
-        _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(1);
-        _webDriver.Navigate().GoToUrl("https://hometax.go.kr");
-
-
-        GoSimpleAuth();
-        FillPersonalInfo();
-        ClosePopups();
-        return;
-
-        //_webDriver.SwitchTo().ParentFrame();
-        //AuthRequest(); // manually 
-        AuthRequestConfirmed();
-        GoGlobalIncomeTax();
-
-        Tries(() =>
+        try
         {
-            var aa = _webDriver.Manage;
-        });
+            // 현재 활성 창의 핸들러를 저장합니다.
+            string mainWindowHandle = _webDriver.CurrentWindowHandle;
 
-        Tries(() =>
+            // 모든 창 핸들러를 가져옵니다.
+            IEnumerable<string> allWindowHandles = _webDriver.WindowHandles;
+
+            // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
+            IEnumerable<string> popupWindowHandles = allWindowHandles.Where(handle => handle != mainWindowHandle);
+
+            // 팝업 창이 있으면 닫습니다.
+            if (popupWindowHandles.Any())
+            {
+                foreach (string popupWindowHandle in popupWindowHandles)
+                {
+                    _webDriver.SwitchTo().Window(popupWindowHandle);
+                    _webDriver.Close();
+                }
+
+                // 다시 기본 창으로 돌아갑니다.
+                _webDriver.SwitchTo().Window(mainWindowHandle);
+            }
+        }
+        catch(Exception ex)
         {
-            var aa = _webDriver.PageSource;
-        });
-
-        Tries(() =>
-        {
-            var aa = _webDriver.CurrentWindowHandle;
-        });
-
-        Tries(() =>
-        {
-            var aa = _webDriver.Url;
-        });
-
-        Tries(() =>
-        {
-            var aa = _webDriver.WindowHandles;
-        });
-
-        Tries(() =>
-        {
-            var aa = _webDriver.Title;
-        });
-
-        Quit();
-
+            _logger.Warn($"{ex}");
+        }
 
     }
 
-    void ClosePopups()
+
+    private string _logFolder;
+
+    public string LogFolder
     {
-        // 현재 활성 창의 핸들러를 저장합니다.
-        string mainWindowHandle = _webDriver.CurrentWindowHandle;
-
-        // 모든 창 핸들러를 가져옵니다.
-        IEnumerable<string> allWindowHandles = _webDriver.WindowHandles;
-
-        // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
-        IEnumerable<string> popupWindowHandles = allWindowHandles.Where(handle => handle != mainWindowHandle);
-
-        // 팝업 창이 있으면 닫습니다.
-        if (popupWindowHandles.Any())
+        get
         {
-            foreach (string popupWindowHandle in popupWindowHandles)
-            {
-                _webDriver.SwitchTo().Window(popupWindowHandle);
-                _webDriver.Close();
-            }
+            if (!string.IsNullOrEmpty(_logFolder)) return _logFolder;
 
-            // 다시 기본 창으로 돌아갑니다.
-            _webDriver.SwitchTo().Window(mainWindowHandle);
+            _logFolder = GetLogFolder();
+            return _logFolder;
         }
+    }
+
+    public void CopyToClipboard(string text) => Clipboard.SetText(text);
+
+    public void Exit() => Application.Current.Shutdown();
+
+    public void Restart()
+    {
+        var path = Application.ResourceAssembly.Location;
+        if (path.EndsWith(".exe"))
+        {
+            Process.Start(path);
+        }
+        else if (path.EndsWith(".dll"))
+        {
+            var lastIndex = path.LastIndexOf(".dll", StringComparison.Ordinal);
+            path = path.Remove(lastIndex) + ".exe";
+
+            Process.Start(path);
+        }
+
+        Application.Current.Shutdown();
+    }
+
+    public void OpenFolder(string folder) => Process.Start("explorer.exe", folder);
+
+    private static string GetLogFolder()
+    {
+        var fileTarget = LogManager.Configuration.AllTargets
+            .OfType<FileTarget>()
+            .SingleOrDefault();
+
+        var fileName = fileTarget?.FileName.Render(new LogEventInfo { TimeStamp = DateTime.Now });
+        return Path.GetDirectoryName(fileName);
     }
 }
 
