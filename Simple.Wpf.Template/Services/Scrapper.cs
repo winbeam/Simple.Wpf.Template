@@ -34,7 +34,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
     public Scrapper()
     {
         _logger.Log(NLog.LogLevel.Info, "Scrapper Started");
-        ApplicationCleanup.RegisterForShutdown(Quit);
     }
         
     public async Task Quit()
@@ -43,15 +42,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
         {
             if (_webDriver is null)
                 return;
-
             _webDriver.Quit();
-            return;
-            // driver가 사용한 모든 창 핸들러를 닫습니다.
-            foreach (string windowHandle in _webDriver.WindowHandles)
-            {
-                _webDriver.SwitchTo().Window(windowHandle);
-                _webDriver.Close();
-            }
         });
         
     }
@@ -82,14 +73,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
         }
 
     }
-    public void GoGoogle()
-    {
-        SetDriver();
-
-        _webDriver.Navigate().GoToUrl("https://www.google.com");
-        var aa = _webDriver.Title.Contains("Google");
-    }
-
     public async Task Test()
     {
         var aa1 = _webDriver.Manage;
@@ -121,7 +104,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
 
     public async Task GoHomeTaxLogin()
     {
-
+        ApplicationCleanup.RegisterForShutdown(Quit);
         await Task.Run(() =>
         {
             SetDriver();
@@ -138,76 +121,40 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
 
     }
 
-     public async Task GoGlobalIncomeTax()
+    public async Task GoGlobalIncomeTax()
     {
+        if (_webDriver is null)
+            return;
+
         await Task.Run(() =>
         {
-            AuthRequestConfirme();
+            AuthRequestConfirm();
 
-#if false
-            Tries(() =>
-            {
-                var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
-                _webDriver.SwitchTo().Frame(paymentPageIframe);
-            });
-            Tries(() =>
-            {
-                _webDriver.FindElement(By.CssSelector("#grpMenuAtag_04_0405040000")).Click();
-            });
-
-            Tries(() =>
-            {
-                _webDriver.FindElement(By.Id("sub_a_0405040000")).Click();
-            });
-
-            Tries(() =>
-            {
-                _webDriver.FindElement(By.Id("textbox8637")).Click();
-            });
-        
-#endif
             // 종합스득세 신고 페이지
             Thread.Sleep(200);
-
             _webDriver.Navigate().GoToUrl(_globalIncomeAddress);
 
             // 종합소득 클릭
             var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
             _webDriver.SwitchTo().Frame(paymentPageIframe);
             _webDriver.FindElement(By.Id("group14455")).Click();
-
-
         });
 
     }
 
     public void GoSimpleAuth()
     {
+        Tries(() => _webDriver.FindElement(By.Id("textbox81212912")).Click());
 
-        Tries(() =>
-        {
-            var elem = _webDriver.FindElement(By.Id("textbox81212912"));
-            elem.Click();
-        });
-
-
-        Tries(() =>
+        Tries(() => 
         {
             var iframe = _webDriver.FindElement(By.Id("txppIframe"));
             _webDriver.SwitchTo().Frame(iframe);
         });
 
-        Tries(() =>
-        {
-            var item1 = _webDriver.FindElement(By.Id("anchor14"));
-            item1.Click();
-        });
-
-        Tries(() =>
-        {
-            var item2 = _webDriver.FindElement(By.Id("anchor23"));
-            item2.Click();
-        });
+        Tries(() => _webDriver.FindElement(By.Id("anchor14")).Click());
+    
+        Tries(() => _webDriver.FindElement(By.Id("anchor23")).Click());
     }
 
     void Tries(Action work, int delay = 500, int tryCount = 2)
@@ -229,24 +176,13 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
     }
     public void AuthRequest()
     {
-
-
-        Tries(() =>
-        {
-            _webDriver.FindElement(By.Id("oacx-request-btn-pc")).Click();
-
-        });
+        Tries(() => _webDriver.FindElement(By.Id("oacx-request-btn-pc")).Click());
     }
 
-    public void AuthRequestConfirme()
+    public void AuthRequestConfirm()
     {
-
-        Tries(() =>
-        {
-            // 인증 완료
-            var ok = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div.standby > div > button.basic.sky.w70"));
-            ok.Click();
-        }, 200, 1);
+        string authSelector = "#oacxEmbededContents > div.standby > div > button.basic.sky.w70";
+        Tries(() => _webDriver.FindElement(By.CssSelector(authSelector)).Click(), 200, 1);
     }
     public void FillPersonalInfo()
     {
@@ -258,56 +194,35 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
             var iframe4 = _webDriver.FindElement(By.Id("simple_iframeView"));
             _webDriver.SwitchTo().Frame(iframe4);
         });
-        Tries(() =>
-        {
-            var name = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(1) > div.ul-td > input[type=text]"));
-            name.SendKeys("신승범");
-        }, 0);
+        string nameSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(1) > div.ul-td > input[type=text]";
+        Tries(() => _webDriver.FindElement(By.CssSelector(nameSelector)).SendKeys("신승범"), 0);
 
-        Tries(() =>
-        {
-            var birth = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(2) > div.ul-td > input"));
-            birth.SendKeys("19860514");
-        }, 0);
+        string birthSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(2) > div.ul-td > input";
+        Tries(() => _webDriver.FindElement(By.CssSelector(birthSelector)).SendKeys("19860514"), 0);
+        string phoneNumberSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li.none-telecom > div.ul-td > input";
+        Tries(() => _webDriver.FindElement(By.CssSelector(phoneNumberSelector)).SendKeys("54010186"), 0);
 
-        Tries(() =>
-        {
-            var phoneNumberEditBox = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li.none-telecom > div.ul-td > input"));
-            phoneNumberEditBox.SendKeys("54010186");
-        }, 0);
 
+        // todo: kakao 인증 아이콘 클릭 
+        string authMethodSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.selectLayout > div > div > ul > li:nth-child(1) > label > a > span > img";
+        Tries(() => _webDriver.FindElement(By.CssSelector(authMethodSelector)).Click());
+        
+        // 모두 동의 체크
         Tries(() =>
         {
-            // todo: kakao 인증 아이콘 클릭 
-            //var aa = _webDriver.FindElement(By.XPath("네이버"));
-            var kakao = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div:nth-child(2) > div > div.selectLayout > div > div > ul > li:nth-child(1) > label > a > span > img"));
-            //var kakao = _webDriver.FindElement(By.CssSelector("#oacxEmbededContents > div:nth-child(2) > div > div.selectLayout > div > div > ul > li.selected > label > a > span > img"));
-            kakao.Click();
-        });
-        Tries(() =>
-        {
-            bool selected = _webDriver.FindElement(By.XPath("//*[@id=\"totalAgree\"]")).Selected;
-            if (selected == false)
-            {
-                // 모두 동의 체크
+            if (_webDriver.FindElement(By.XPath("//*[@id=\"totalAgree\"]")).Selected == false)
                 _webDriver.FindElement(By.Id("totalAgree")).Click();
-            }
         }, 0);
     }
     void ClosePopups()
     {
         try
         {
-            // 현재 활성 창의 핸들러를 저장합니다.
             string mainWindowHandle = _webDriver.CurrentWindowHandle;
-
-            // 모든 창 핸들러를 가져옵니다.
             IEnumerable<string> allWindowHandles = _webDriver.WindowHandles;
-
             // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
             IEnumerable<string> popupWindowHandles = allWindowHandles.Where(handle => handle != mainWindowHandle);
 
-            // 팝업 창이 있으면 닫습니다.
             if (popupWindowHandles.Any())
             {
                 foreach (string popupWindowHandle in popupWindowHandles)
@@ -329,7 +244,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
 
 
     private string _logFolder;
-
     public string LogFolder
     {
         get
@@ -340,7 +254,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IApplicationService, IRegi
             return _logFolder;
         }
     }
-
     public void CopyToClipboard(string text) => Clipboard.SetText(text);
 
     public void Exit() => Application.Current.Shutdown();
