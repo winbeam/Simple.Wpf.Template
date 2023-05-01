@@ -8,15 +8,28 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Simple.Wpf.Template.Services;
+public class IFrameState : IDisposable
+{
+    IFrameManager _manager;
+    public IFrameState(IFrameManager manager, List<string> iframes)
+    {
+        _manager = manager;
+        _manager.Set(iframes);
+    }
 
-internal class IFrameState
+    public void Dispose()
+    {
+        _manager.SwitchToDefault();
+    }
+}
+public class IFrameManager
 {
     List<string> _iframes = new();
 
     WebDriverWait _wait1;
     IWebDriver _webDriver;
     ILogger _logger;
-    public IFrameState(IWebDriver webDriver, ILogger logger)
+    public IFrameManager(IWebDriver webDriver, ILogger logger)
     {
         _webDriver = webDriver;
         _logger = logger;
@@ -27,26 +40,30 @@ internal class IFrameState
         if (IsAlready(iframes))
             return true;
 
-        _webDriver.SwitchTo().DefaultContent(); // from start
+        SwitchToDefault();
 
         try
         {
             foreach (var iframe in iframes)
             {
-                if (IsElem1(By.Id(iframe), out IWebElement iframeElem) == false)
-                    return false;
-
-                _webDriver.SwitchTo().Frame(iframeElem);
+                //if (IsElem1(By.Id(iframe), out IWebElement iframeElem) == false)
+                //    return false;
+                _webDriver.SwitchTo().Frame(iframe);
             }
         }
         catch(Exception e)
         {
+            SwitchToDefault();
             _logger.Error(e);
+            return false;
         }
 
-        return false;
+        return true;
     }
-
+    public void SwitchToDefault()
+    {
+        _webDriver.SwitchTo().DefaultContent();
+    }
     bool IsAlready(List<string> iframes)
     {
         return Enumerable.SequenceEqual(_iframes, iframes);

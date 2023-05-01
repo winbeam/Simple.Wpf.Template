@@ -4,23 +4,16 @@ using OpenQA.Selenium.Support.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using WebDriverManager.DriverConfigs.Impl;
 using WebDriverManager;
 using System.Threading;
-using Simple.Wpf.Template.ViewModels;
 using JetBrains.Annotations;
 using NLog;
-using NLog.Targets;
-using System.Diagnostics;
 using System.Windows;
-using System.IO;
 using Simple.Wpf.Template.Modules;
-using System.Reactive.Disposables;
 using Simple.Wpf.Template.Helpers;
-using ControlzEx.Standard;
-using System.Windows.Media.Animation;
+using System.Runtime.InteropServices;
 
 namespace Simple.Wpf.Template.Services;
 
@@ -29,6 +22,7 @@ namespace Simple.Wpf.Template.Services;
 public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IApplicationService
 {
     private IWebDriver _webDriver;
+    private IFrameManager _iframeManager;
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     readonly string _hometaxAddr = "https://hometax.go.kr";
@@ -69,12 +63,20 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
         try
         {
+#if false
+            var options = new ChromeOptions(); 
+            options.AddArgument("--no-sandbox");
+
+            _webDriver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(5));
+            _webDriver.Manage().Timeouts().PageLoad.Add(System.TimeSpan.FromSeconds(10));
+#endif
             _webDriver = new ChromeDriver();
 
+            _iframeManager = new IFrameManager(_webDriver, _logger);
             _logger.Log(NLog.LogLevel.Info, "Web Driver Started");
 
-            _wait1 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(300));
-            _wait2 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(300));
+            _wait1 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            _wait2 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
             _wait3 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(500));
             _wait4 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(4), TimeSpan.FromMilliseconds(500));
             _wait5 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
@@ -98,54 +100,94 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             element.Click();
     }
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
 
     // iframe 빈값( <html><head></head><body></body></html> _)
     // startCs
     // simple_iframeView
-    public async Task Test()
+    public void Test()
     {
-        //var aa1 = _webDriver.Manage;
-        var aa2 = _webDriver.PageSource;
-        //var aa3 = _webDriver.CurrentWindowHandle;
-        //var aa4 = _webDriver.Url;
-        //var aa5 = _webDriver.WindowHandles;
-        //var aa6 = _webDriver.Title;
 
-        await Task.Run(() =>
+        try
         {
-            try
+
+            Thread.Sleep(2000);
+            //SendKeys.SendWait("{ESC}");
+
+
+            _webDriver.SwitchTo().DefaultContent();
+
+
+
+            var aa1 = _webDriver.Manage;
+            ///var aa2 = _webDriver.PageSource;
+            var aa3 = _webDriver.CurrentWindowHandle;
+            var aa4 = _webDriver.Url;
+            var aa5 = _webDriver.WindowHandles;
+            var aa6 = _webDriver.Title;
+
+
+            //string mainWindowHandle = _webDriver.CurrentWindowHandle;
+            //IEnumerable<string> allWindowHandles = _webDriver.WindowHandles;
+            //// 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
+            //IEnumerable<string> popupWindowHandles = allWindowHandles.Where(handle => handle != mainWindowHandle);
+
+            foreach (string popupWindowHandle in _webDriver.WindowHandles)
             {
+                try
+                {
+                    var win = _webDriver.SwitchTo().Window(popupWindowHandle);
+                    var ss = win.PageSource;
+                    //var alert2 = _webDriver.SwitchTo().Alert();
+                    //alert2.Accept();
+                }
+                catch(Exception e)
+                {
 
-                // 종합스득세 신고 페이지
-                _webDriver.Navigate().GoToUrl(_globalIncomeAddr);
-
-                IsOnServiceTime();
-
-
-                // 종합소득 클릭
-                var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
-                _webDriver.SwitchTo().Frame(paymentPageIframe);
-                //Thread.Sleep(200);
-                if (IsElem(By.XPath("//*[@id=\"textbox8637\"]"), out IWebElement elem))
-                    elem?.Click();
-
-
+                }
             }
-            catch(Exception ex)
-            {
-            }
-            finally
-            {
-                _webDriver.SwitchTo().DefaultContent();
-            }
-        });
+            return;
+            // 종합스득세 신고 페이지
+            _webDriver.Navigate().GoToUrl(_globalIncomeAddr);
+
+            IsOnServiceTime();
+
+
+            // 종합소득 클릭
+            var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
+            _webDriver.SwitchTo().Frame(paymentPageIframe);
+            //Thread.Sleep(200);
+            if (this.IsElem3<IWebElement>(By.XPath("//*[@id='textbox8637']"), out IWebElement elem2))
+                elem2?.Click();
+
+
+        }
+        catch(Exception ex)
+        {
+        }
+        finally
+        {
+            DefaultContent();
+        }
     }
     
+    void DefaultContent()
+    {
+        try
+        {
+            _webDriver.SwitchTo().DefaultContent();
+        }
+        catch(Exception ex)
+        {
+            _logger.Error(ex);
+        }
+    }
 
 
     bool IsOnServiceTime()
     {
-        // 5월1일부터 시작 되는..
         var elem = _webDriver.FindElement(By.PartialLinkText("서비스 이용시간"));
         return elem != null;
     }
@@ -170,6 +212,46 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         });
     }
 
+    public async Task GoGlobalIncomeTax()
+    {
+        if (_webDriver is null)
+            return;
+
+        await Task.Run((Action)(() =>
+        {
+            try
+            {
+                AuthRequestConfirm();
+
+                //var authElem = _webDriver.FindElement(By.XPath($"//img[@alt='{authAltName}']"));
+                if (IsElem3(By.XPath("//span[contains(text(),'로그아웃')]"), out IWebElement elem2) == false)
+                {
+                    MessageBox.Show("로그인 상태가 아닙니다. \n 로그인 완료후 다시 시도해 주세요");
+                    return;
+                }
+                // 종합스득세 신고 페이지
+                _webDriver.Navigate().GoToUrl(_globalIncomeAddr);
+                Thread.Sleep(500);
+                // 금융소득 버튼 조회
+                using (new IFrameState(_iframeManager, new() { "txppIframe" }))
+                {
+                    if (IsElem1(By.XPath("//span[contains(text(),'금융소득 조회')]"), out IWebElement elemBtn))
+                        elemBtn.Click();
+
+                    //if (this.IsElem3<IWebElement>(By.XPath("//*[@id=\"textbox8637\"]"), out elem))
+                    //    elem?.Click();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+
+        }));
+
+    }
+
+
     void SetBrowserSizeAndPosition()
     {
         // 현재 모니터의 해상도를 가져옵니다.
@@ -188,12 +270,27 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         _webDriver.Manage().Window.Position = new System.Drawing.Point(10, 10);
     }
 
-    bool IsElem1<IWebElement>(By by, out IWebElement elem)
+    bool IsElem1<IWebElement>(By by, out IWebElement elem, int delay = 0)
+    {
+        return IsElem(_wait1, by, out elem, delay);
+    }
+    bool IsElem2<IWebElement>(By by, out IWebElement elem, int delay = 0)
+    {
+        return IsElem(_wait2, by, out elem, delay);
+    }
+    bool IsElem3<IWebElement>(By by, out IWebElement elem, int delay = 0)
+    {
+        return IsElem(_wait3, by, out elem, delay);
+    }
+
+    IWebElement _logoutElem; // todo log 
+    bool IsElem<IWebElement>(WebDriverWait wait, By by, out IWebElement elem, int delay = 0)
     {
         elem = default(IWebElement);
         try
         {
-            elem = (IWebElement)_wait1.Until(drv => drv.FindElement(by));
+            elem = (IWebElement)wait.Until(drv => drv.FindElement(by));
+            Thread.Sleep(delay);
             return elem != null;
         }
         catch (WebDriverTimeoutException e)
@@ -204,78 +301,28 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         {
         }
         return false;
-    }
-
-    IWebElement _logoutElem;
-    bool IsElem<IWebElement>(By by, out IWebElement elem)
-    {
-        elem = default(IWebElement);
-        try
-        {
-            elem = (IWebElement)_wait3.Until(drv => drv.FindElement(by));            
-            return elem != null;
-        }
-        catch (WebDriverTimeoutException e)
-        {
-
-        }
-        catch (Exception e)
-        {
-        }
-        return false;
-    }
-
-    public async Task GoGlobalIncomeTax()
-    {
-        if (_webDriver is null)
-            return;
-
-        await Task.Run(() =>
-        {
-            try
-            {
-
-                AuthRequestConfirm();
-                Thread.Sleep(500);
-
-                if (IsElem(By.LinkText("로그아웃"), out IWebElement elem) == false)
-                {
-                    MessageBox.Show("로그인 상태가 아닙니다. \n 로그인 완료후 다시 시도해 주세요");
-                    return;
-                }
-                // 종합스득세 신고 페이지
-                _webDriver.Navigate().GoToUrl(_globalIncomeAddr);
-
-                // 종합소득 클릭
-                var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
-                _webDriver.SwitchTo().Frame(paymentPageIframe);
-                Thread.Sleep(200);
-                if (IsElem(By.XPath("//*[@id=\"textbox8637\"]"), out elem))
-                    elem?.Click();
-            }
-            catch(Exception e)
-            {
-
-            }
-
-        });
-
     }
 
     public void GoSimpleAuth()
-    { 
-
-        Tries(() => _webDriver.FindElement(By.Id("textbox81212912")).Click());
-
-        Tries(() => 
+    {
+        try
         {
-            var iframe = _webDriver.FindElement(By.Id("txppIframe"));
-            _webDriver.SwitchTo().Frame(iframe);
-        });
+            if (IsElem3(By.Id("textbox81212912"), out IWebElement elem, 500))
+                elem.Click();
 
-        Tries(() => _webDriver.FindElement(By.Id("anchor14")).Click());
-    
-        Tries(() => _webDriver.FindElement(By.Id("anchor23")).Click());
+            using (new IFrameState(_iframeManager, new() { "txppIframe" }))
+            {
+                Thread.Sleep(200);
+                if (IsElem3(By.Id("anchor14"), out elem, 500))
+                    elem.Click();
+                if (IsElem3(By.Id("anchor23"), out elem, 500))
+                    elem.Click();
+            }
+        }
+        catch(Exception e)
+        {
+            _logger.Error(e);
+        }
     }
 
 
@@ -312,22 +359,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         Samsung
     }
 
-    void SelectAuth(AuthMethod method)
-    {
-        try
-        {
-            
-
-        }
-        catch(Exception e)
-        {
-            _logger.Error($"{e} CURRENT_PAGE_SOURCE:({_webDriver.PageSource})");
-        }
-        finally
-        {
-            _webDriver.SwitchTo().DefaultContent();
-        }
-    }
     
     public void AuthRequest()
     {
@@ -338,77 +369,63 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     {
         try
         {
-            if (IsElem1(By.Id("txppIframe"), out IWebElement elem) == true)
-                _webDriver.SwitchTo().Frame(elem);
-
-            var iframe2 = _webDriver.FindElement(By.Id("UTECMADA02_iframe"));
-            _webDriver.SwitchTo().Frame(iframe2);
-
-            var iframe3 = _webDriver.FindElement(By.Id("simple_iframeView"));
-            _webDriver.SwitchTo().Frame(iframe3);
-
-            //string authSelector = "#oacxEmbededContents > div.standby > div > button.basic.sky.w70";
-            if (IsElem1(By.Id("oacx-request-btn-pc"), out elem))
-                elem.Click();
-
-            _webDriver.SwitchTo().DefaultContent();
+            using (new IFrameState(_iframeManager, new() { "txppIframe", "UTECMADA02_iframe", "simple_iframeView" }))
+            {
+                if (IsElem1(By.XPath("//button[contains(text(),'인증 완료')]"), out IWebElement elem))
+                {
+                    elem.Click();
+                    Thread.Sleep(1000);
+                }
+            }
         }
         catch(Exception e)
         {
-            _webDriver.SwitchTo().DefaultContent();
+            _logger.Error(e);
         }
     }
     public void FillPersonalInfo(string name, string birth, string phone, AuthMethod method)
     {
         try
         {
-            _webDriver.SwitchTo().DefaultContent();
-
-            if (IsElem1(By.Id("txppIframe"), out IWebElement iframe) == true)
-                _webDriver.SwitchTo().Frame(iframe);
-            var iframe3 = _webDriver.FindElement(By.Id("UTECMADA02_iframe"));
-            _webDriver.SwitchTo().Frame(iframe3);
-            var iframe4 = _webDriver.FindElement(By.Id("simple_iframeView"));
-            _webDriver.SwitchTo().Frame(iframe4);
-
-            string nameSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(1) > div.ul-td > input[type=text]";
-            _webDriver.FindElement(By.CssSelector(nameSelector)).SendKeys(name);
-
-            string birthSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(2) > div.ul-td > input";
-            _webDriver.FindElement(By.CssSelector(birthSelector)).SendKeys(birth);
-
-
-            string phoneNumberSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li.none-telecom > div.ul-td > input";
-            _webDriver.FindElement(By.CssSelector(phoneNumberSelector)).SendKeys(phone);
-
-            #region AuthMethod
-            string authAltName = string.Empty;
-            switch (method)
+            using (new IFrameState(_iframeManager, new() { "txppIframe", "UTECMADA02_iframe", "simple_iframeView" }))
             {
-                case AuthMethod.Kakao:
-                    authAltName = "KAKAO(카카오)"; break;
-                case AuthMethod.Kukmin:
-                    authAltName = "KB 국민은행(국민인증서)"; break;
-                default:
-                    _logger.Warn($"{method} not supported yet ");
-                    return;
-            }
+                string nameSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(1) > div.ul-td > input[type=text]";
+                _webDriver.FindElement(By.CssSelector(nameSelector)).SendKeys(name);
 
-            //var elem2 = _webDriver.FindElement(By.XPath("//img[@alt=contains(text(),'KAKAO')]"));
-            var authElem = _webDriver.FindElement(By.XPath($"//img[@alt='{authAltName}']"));
-            authElem.Click();
-            #endregion
+                string birthSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(2) > div.ul-td > input";
+                _webDriver.FindElement(By.CssSelector(birthSelector)).SendKeys(birth);
 
-            if (IsElem(By.XPath("//*[@id=\"totalAgree\"]"), out IWebElement elem))
-            {
-                if (elem.Selected == false)
+
+                string phoneNumberSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li.none-telecom > div.ul-td > input";
+                _webDriver.FindElement(By.CssSelector(phoneNumberSelector)).SendKeys(phone);
+
+                #region AuthMethod
+                string authAltName = string.Empty;
+                switch (method)
+                {
+                    case AuthMethod.Kakao:
+                        authAltName = "KAKAO(카카오)"; break;
+                    case AuthMethod.Kukmin:
+                        authAltName = "KB 국민은행(국민인증서)"; break;
+                    default:
+                        _logger.Warn($"{method} not supported yet ");
+                        return;
+                }
+
+                //var elem2 = _webDriver.FindElement(By.XPath("//img[@alt=contains(text(),'KAKAO')]"));
+                var authElem = _webDriver.FindElement(By.XPath($"//img[@alt='{authAltName}']"));
+                authElem.Click();
+                #endregion
+
+                if (IsElem3(By.XPath("//*[@id=\"totalAgree\"]"), out IWebElement elem))
+                {
+                    if (elem.Selected == false)
+                        _webDriver.FindElement(By.Id("totalAgree")).Click();
+                }
+                if (_webDriver.FindElement(By.XPath("//*[@id=\"totalAgree\"]")).Selected == false)
                     _webDriver.FindElement(By.Id("totalAgree")).Click();
+
             }
-                elem?.Click();
-
-            if (_webDriver.FindElement(By.XPath("//*[@id=\"totalAgree\"]")).Selected == false)
-                _webDriver.FindElement(By.Id("totalAgree")).Click();
-
         }
         catch(Exception e)
         {
