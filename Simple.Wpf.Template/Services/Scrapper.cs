@@ -14,6 +14,7 @@ using System.Windows;
 using Simple.Wpf.Template.Modules;
 using Simple.Wpf.Template.Helpers;
 using System.Runtime.InteropServices;
+using OpenQA.Selenium.DevTools.V110.Overlay;
 
 namespace Simple.Wpf.Template.Services;
 
@@ -70,7 +71,11 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             _webDriver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(5));
             _webDriver.Manage().Timeouts().PageLoad.Add(System.TimeSpan.FromSeconds(10));
 #endif
-            _webDriver = new ChromeDriver();
+            var options = new ChromeOptions();
+            options.AddArgument("--disable-notifications");
+
+            _webDriver = new ChromeDriver(options);
+            _webDriver.Manage().Timeouts().PageLoad.Add(System.TimeSpan.FromSeconds(5));
 
             _iframeManager = new IFrameManager(_webDriver, _logger);
             _logger.Log(NLog.LogLevel.Info, "Web Driver Started");
@@ -107,32 +112,74 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     // iframe 빈값( <html><head></head><body></body></html> _)
     // startCs
     // simple_iframeView
+
+
+    bool DismissIfAlertExist(string windowsHandle, ref string message)
+    {
+        try
+        {
+            var alert = _webDriver.SwitchTo().Alert();
+            message = alert.Text;
+            alert.Dismiss();
+            alert.SendKeys(Keys.Escape);
+            alert.Accept();
+            return true;
+        }
+        catch 
+        {
+            return false;
+        }
+    }
     public void Test()
     {
 
         try
         {
-
-            Thread.Sleep(2000);
-            //SendKeys.SendWait("{ESC}");
-
-
-            _webDriver.SwitchTo().DefaultContent();
-
-
-
-            var aa1 = _webDriver.Manage;
-            ///var aa2 = _webDriver.PageSource;
-            var aa3 = _webDriver.CurrentWindowHandle;
-            var aa4 = _webDriver.Url;
-            var aa5 = _webDriver.WindowHandles;
-            var aa6 = _webDriver.Title;
-
+            try
+            {
+                //var aa1 = _webDriver.Manage;
+                ///var aa2 = _webDriver.PageSource;
+                //var aa3 = _webDriver.CurrentWindowHandle;
+                //var aa4 = _webDriver.Url;
+                var aa5 = _webDriver.WindowHandles;
+                //var aa6 = _webDriver.Title;
+            }
+            catch { }
 
             //string mainWindowHandle = _webDriver.CurrentWindowHandle;
+
             //IEnumerable<string> allWindowHandles = _webDriver.WindowHandles;
             //// 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
             //IEnumerable<string> popupWindowHandles = allWindowHandles.Where(handle => handle != mainWindowHandle);
+
+            try
+            {
+                var win2 = _webDriver.SwitchTo().Window(_webDriver.WindowHandles.ElementAt(0));
+                var alert2 = _webDriver.SwitchTo().Alert();
+                alert2.Dismiss();
+                alert2.SendKeys(Keys.Escape);
+                alert2.Accept();
+            }
+            catch { }
+            try
+            {
+                var win2 = _webDriver.SwitchTo().Window(_webDriver.WindowHandles.ElementAt(1));
+                var alert2 = _webDriver.SwitchTo().Alert();
+                alert2.Dismiss();
+                alert2.SendKeys(Keys.Escape);
+                alert2.Accept();
+            }
+            catch { }
+            try
+            {
+                var win2 = _webDriver.SwitchTo().Window(_webDriver.WindowHandles.ElementAt(0));
+                var alert2 = _webDriver.SwitchTo().Alert();
+                alert2.Dismiss();
+                alert2.SendKeys(Keys.Escape);
+                alert2.Accept();
+            }
+            catch { }
+            _webDriver.SwitchTo().ActiveElement().Click();
 
             foreach (string popupWindowHandle in _webDriver.WindowHandles)
             {
@@ -140,8 +187,8 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                 {
                     var win = _webDriver.SwitchTo().Window(popupWindowHandle);
                     var ss = win.PageSource;
-                    //var alert2 = _webDriver.SwitchTo().Alert();
-                    //alert2.Accept();
+                    //continue;
+                    _webDriver.SwitchTo().ActiveElement().Click();
                 }
                 catch(Exception e)
                 {
@@ -196,8 +243,8 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         await Task.Run(() =>
         {
             SetDriver();
-            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(3);
-
+            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+            
             _webDriver.Navigate().GoToUrl(_hometaxAddr);
 
             SetBrowserSizeAndPosition();
@@ -241,16 +288,54 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     //if (this.IsElem3<IWebElement>(By.XPath("//*[@id=\"textbox8637\"]"), out elem))
                     //    elem?.Click();
                 }
+
+                // popup 
+
+
+
+                string mainWindowHandle = _webDriver.CurrentWindowHandle;
+                var allWindowHandles = _webDriver.WindowHandles;
+                // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
+                var popups = allWindowHandles.Where(handle => handle != mainWindowHandle);
+
+                if (popups.Any() == false)
+                {
+                    MessageBox.Show("금융소득 조회 팝업 없음");
+                    return;
+                }
+                    
+                foreach (string popup in popups)
+                {
+                    try
+                    {
+                        string message = string.Empty;
+                        _webDriver.SwitchTo().Window(popup);
+                        DismissIfAlertExist(popup, ref message);
+                        if (DownloadIfGlobalIncomeExist())
+                            break;
+                    }
+                    catch(Exception e)
+                    {
+
+                    }
+                }
+                // 다시 기본 창으로 돌아갑니다.
+                //_webDriver.SwitchTo().Window(mainWindowHandle);
+
             }
             catch (Exception e)
             {
-
+                MessageBox.Show("GoGlobalIncomeTax 오류");
             }
 
         }));
 
     }
+    bool DownloadIfGlobalIncomeExist()
+    {
 
+        return false;
+    }
 
     void SetBrowserSizeAndPosition()
     {
@@ -360,11 +445,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     }
 
     
-    public void AuthRequest()
-    {
-        Tries(() => _webDriver.FindElement(By.Id("oacx-request-btn-pc")).Click());
-    }
-    
     public void AuthRequestConfirm()
     {
         try
@@ -424,6 +504,10 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                 }
                 if (_webDriver.FindElement(By.XPath("//*[@id=\"totalAgree\"]")).Selected == false)
                     _webDriver.FindElement(By.Id("totalAgree")).Click();
+
+                // 인증 요청
+                if (IsElem1(By.Id("oacx-request-btn-pc"), out IWebElement authReq))
+                    authReq.Click();
 
             }
         }

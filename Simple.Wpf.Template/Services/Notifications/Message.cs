@@ -32,6 +32,8 @@ public sealed class Message : INotification, IRegisteredService, IEquatable<Mess
 
     public Message()
     {
+        return;
+
         var directory = Path.GetDirectoryName(typeof(MessageWithSnooze).Assembly.Location);
         if (directory == null)
             throw new Exception("Directory is NULL");

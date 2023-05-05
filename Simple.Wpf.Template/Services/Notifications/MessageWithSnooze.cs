@@ -13,6 +13,8 @@ public sealed class MessageWithSnooze : INotification, IRegisteredService, IEqua
 {
     public MessageWithSnooze()
     {
+        return;
+
         var directory = Path.GetDirectoryName(typeof(MessageWithSnooze).Assembly.Location);
         if (directory == null)
             throw new Exception("Directory is NULL");

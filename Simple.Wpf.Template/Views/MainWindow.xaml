@@ -13,7 +13,7 @@
                  TextOptions.TextFormattingMode="Display"
                  SaveWindowPosition="True"
                  TitleCharacterCasing="Normal"
-                 WindowState="Maximized"
+                 WindowState="Normal"
                  WindowStartupLocation="CenterScreen"
                  WindowTitleBrush="{StaticResource Simple.Wpf.Template.Brushes.Accent}"
                  d:DataContext="{d:DesignInstance vm:MainViewModel}">
@@ -60,29 +60,24 @@
         <TextBlock Grid.Column="0"
                        Grid.Row="0"
                        TextWrapping="Wrap"
-                       Text="Exceptions - enter some text and choose the exception you want to throw exception:" />
+                       Text="Home Tax Automation" />
 
-        <TextBox x:Name="ExceptionText"
-                     Grid.Column="0"
-                     Grid.Row="2"
-                     Height="56"
-                     HorizontalAlignment="Stretch"
-                     HorizontalContentAlignment="Left"
-                     TextWrapping="Wrap"
-                     Text="Something went wrong!" />
+        <ListBox Grid.Row="0" ItemsSource="{Binding FileObjectCollection}" 
+		                    SelectedItem="{Binding SelectedFileObject}"/>
+
 
         <StackPanel Grid.Column="0"
                     Grid.Row="4"
                     Orientation="Horizontal">
 
             <Button Margin="0,0,8,0"
-                    Content="HomeTax Login Page"
+                    Content="1. HomeTax Login Page"
                     HorizontalAlignment="Left"
                     Command="{Binding Path=HomeTaxLoginPageCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
 
             <Button Margin="0,0,8,0"
-                    Content="Income Tax Page"
+                    Content="2. Income Tax Page"
                     HorizontalAlignment="Left"
                     Command="{Binding Path=HomeTaxIncomeTaxPageCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />

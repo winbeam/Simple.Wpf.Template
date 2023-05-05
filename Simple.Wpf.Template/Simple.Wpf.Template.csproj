@@ -5,6 +5,8 @@
 		<TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
 		<Nullable>disable</Nullable>
 		<UseWPF>true</UseWPF>
+		<ApplicationIcon>sankakucomplex.ico</ApplicationIcon>
+		<AssemblyName>HomeTaxAuto</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -15,6 +17,7 @@
 		<Content Include="NLog.config">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<Content Include="sankakucomplex.ico" />
 	</ItemGroup>
 
 	<ItemGroup>
