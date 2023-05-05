@@ -1,6 +1,7 @@
 ﻿using NLog;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,10 +9,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Simple.Wpf.Template.Services;
-public class IFrameState : IDisposable
+public class IFramer : IDisposable
 {
     IFrameManager _manager;
-    public IFrameState(IFrameManager manager, List<string> iframes)
+    public IFramer(IFrameManager manager, List<string> iframes)
     {
         _manager = manager;
         _manager.Set(iframes);
@@ -26,30 +27,31 @@ public class IFrameManager
 {
     List<string> _iframes = new();
 
-    WebDriverWait _wait1;
+    WebDriverWait _wait;
     IWebDriver _webDriver;
     ILogger _logger;
     public IFrameManager(IWebDriver webDriver, ILogger logger)
     {
         _webDriver = webDriver;
         _logger = logger;
-        _wait1 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+        _wait = new WebDriverWait(new SystemClock(),
+                                    _webDriver,
+                                    TimeSpan.FromSeconds(3),
+                                    TimeSpan.FromMilliseconds(200));
     }
     public bool Set(List<string> iframes)
     {
         if (IsAlready(iframes))
             return true;
 
-        SwitchToDefault();
-
         try
         {
+            SwitchToDefault();
             foreach (var iframe in iframes)
             {
-                //if (IsElem1(By.Id(iframe), out IWebElement iframeElem) == false)
-                //    return false;
                 _webDriver.SwitchTo().Frame(iframe);
             }
+            return true;
         }
         catch(Exception e)
         {
@@ -57,35 +59,29 @@ public class IFrameManager
             _logger.Error(e);
             return false;
         }
-
-        return true;
     }
     public void SwitchToDefault()
     {
         _webDriver.SwitchTo().DefaultContent();
     }
+    bool IsExist(By by, out IWebElement elem, int timeout = 3)
+    {
+        elem = null;
+        try
+        {
+            elem = _wait.Until(ExpectedConditions.ElementExists(by));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex);
+            return false;
+        }
+    }
+
     bool IsAlready(List<string> iframes)
     {
         return Enumerable.SequenceEqual(_iframes, iframes);
-    }
-
-    bool IsElem1<IWebElement>(By by, out IWebElement elem)
-    {
-        elem = default(IWebElement);
-        try
-        {
-            elem = (IWebElement)_wait1.Until(drv => drv.FindElement(by));
-            return elem != null;
-        }
-        catch (WebDriverTimeoutException e)
-        {
-            _logger.Error(e);
-        }
-        catch (Exception e)
-        {
-            _logger.Error(e);
-        }
-        return false;
     }
 
 }

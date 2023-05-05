@@ -42,7 +42,7 @@ public sealed class Message : INotification, IRegisteredService, IEquatable<Mess
         Template = File.ReadAllText(Path.Combine(templates, templates, "message.xml"));
     }
 
-    private string Template { get;  }
+    private string Template { get; } = string.Empty;
 
     public NotificationType Type => NotificationType.Message;
 

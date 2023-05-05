@@ -14,7 +14,12 @@ using System.Windows;
 using Simple.Wpf.Template.Modules;
 using Simple.Wpf.Template.Helpers;
 using System.Runtime.InteropServices;
-using OpenQA.Selenium.DevTools.V110.Overlay;
+using SeleniumExtras.WaitHelpers;
+using OpenQA.Selenium.Interactions;
+using System.IO;
+using System.Windows.Controls.Primitives;
+using AngleSharp.Dom;
+using System.Diagnostics;
 
 namespace Simple.Wpf.Template.Services;
 
@@ -22,10 +27,11 @@ namespace Simple.Wpf.Template.Services;
 [UsedImplicitly]
 public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IApplicationService
 {
+    string _downloadDirectory = @"C:\HomeTaxDownloads";
+
     private IWebDriver _webDriver;
     private IFrameManager _iframeManager;
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
     readonly string _hometaxAddr = "https://hometax.go.kr";
     readonly string _globalIncomeAddr = "https://hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml&tmIdx=4&tm2lIdx=0405000000&tm3lIdx=0405040000";
 
@@ -39,7 +45,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         _logger.Log(NLog.LogLevel.Info, "Scrapper Started");
         ApplicationCleanup.RegisterForShutdown(Quit);
     }
-        
+
     public async Task Quit()
     {
         await Task.Run(() =>
@@ -48,7 +54,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                 return;
             _webDriver.Quit();
         });
-        
+
     }
 
     void SetDriver()
@@ -60,10 +66,19 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         var info = config.GetMatchingBrowserVersion();
         var manager = new DriverManager();
         manager.SetUpDriver(new ChromeConfig(), info);
-        //IWebDriver _webDriver = new ChromeDriver();
 
         try
         {
+            Directory.CreateDirectory(_downloadDirectory);
+            var options = new ChromeOptions();
+            //options.AddArguments("--disable-extensions");
+            options.AddUserProfilePreference("download.default_directory", _downloadDirectory);
+
+            // ChromeOptions에서 설정한 값을 읽어오기
+            //var arguments = options.Arguments.ToList();
+            //var prefs = options.ToCapabilities().GetCapability("goog:chromeOptions");
+            //string downloadPath = prefs["download"]["default_directory"].ToString();
+
 #if false
             var options = new ChromeOptions(); 
             options.AddArgument("--no-sandbox");
@@ -71,74 +86,47 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             _webDriver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(5));
             _webDriver.Manage().Timeouts().PageLoad.Add(System.TimeSpan.FromSeconds(10));
 #endif
-            var options = new ChromeOptions();
-            options.AddArgument("--disable-notifications");
+
 
             _webDriver = new ChromeDriver(options);
-            _webDriver.Manage().Timeouts().PageLoad.Add(System.TimeSpan.FromSeconds(5));
+            _webDriver.Manage().Timeouts().PageLoad.Add(TimeSpan.FromSeconds(5));
+            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
 
             _iframeManager = new IFrameManager(_webDriver, _logger);
-            _logger.Log(NLog.LogLevel.Info, "Web Driver Started");
+            _logger.Info("Web Driver Started");
 
-            _wait1 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            _wait2 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
-            _wait3 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(500));
-            _wait4 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(4), TimeSpan.FromMilliseconds(500));
-            _wait5 = new WebDriverWait(new SystemClock(), _webDriver, timeout: TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+            var clock = new SystemClock();
+            var interval = TimeSpan.FromMilliseconds(200);
+            _wait1 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(1), interval);
+            _wait2 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(2), interval);
+            _wait3 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(3), interval);
+            _wait4 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(4), interval);
+            _wait5 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(5), interval);
+
+
         }
         catch (WebDriverException ex)
         {
             _logger.Error($"{ex}");
             throw;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             _logger.Error($"{ex}");
         }
 
     }
 
-    void IsTemporaryPageThenClick()
-    {
-        var element = _wait1.Until(e => e.FindElement(By.Id("RD3BOX")));
-        if (element != null)
-            element.Click();
-    }
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-
-    // iframe 빈값( <html><head></head><body></body></html> _)
-    // startCs
-    // simple_iframeView
-
-
-    bool DismissIfAlertExist(string windowsHandle, ref string message)
-    {
-        try
-        {
-            var alert = _webDriver.SwitchTo().Alert();
-            message = alert.Text;
-            alert.Dismiss();
-            alert.SendKeys(Keys.Escape);
-            alert.Accept();
-            return true;
-        }
-        catch 
-        {
-            return false;
-        }
-    }
     public void Test()
     {
 
         try
         {
+
             try
             {
                 //var aa1 = _webDriver.Manage;
-                ///var aa2 = _webDriver.PageSource;
+                //var aa2 = _webDriver.PageSource;
                 //var aa3 = _webDriver.CurrentWindowHandle;
                 //var aa4 = _webDriver.Url;
                 var aa5 = _webDriver.WindowHandles;
@@ -146,60 +134,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             }
             catch { }
 
-            //string mainWindowHandle = _webDriver.CurrentWindowHandle;
 
-            //IEnumerable<string> allWindowHandles = _webDriver.WindowHandles;
-            //// 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
-            //IEnumerable<string> popupWindowHandles = allWindowHandles.Where(handle => handle != mainWindowHandle);
-
-            try
-            {
-                var win2 = _webDriver.SwitchTo().Window(_webDriver.WindowHandles.ElementAt(0));
-                var alert2 = _webDriver.SwitchTo().Alert();
-                alert2.Dismiss();
-                alert2.SendKeys(Keys.Escape);
-                alert2.Accept();
-            }
-            catch { }
-            try
-            {
-                var win2 = _webDriver.SwitchTo().Window(_webDriver.WindowHandles.ElementAt(1));
-                var alert2 = _webDriver.SwitchTo().Alert();
-                alert2.Dismiss();
-                alert2.SendKeys(Keys.Escape);
-                alert2.Accept();
-            }
-            catch { }
-            try
-            {
-                var win2 = _webDriver.SwitchTo().Window(_webDriver.WindowHandles.ElementAt(0));
-                var alert2 = _webDriver.SwitchTo().Alert();
-                alert2.Dismiss();
-                alert2.SendKeys(Keys.Escape);
-                alert2.Accept();
-            }
-            catch { }
-            _webDriver.SwitchTo().ActiveElement().Click();
-
-            foreach (string popupWindowHandle in _webDriver.WindowHandles)
-            {
-                try
-                {
-                    var win = _webDriver.SwitchTo().Window(popupWindowHandle);
-                    var ss = win.PageSource;
-                    //continue;
-                    _webDriver.SwitchTo().ActiveElement().Click();
-                }
-                catch(Exception e)
-                {
-
-                }
-            }
-            return;
-            // 종합스득세 신고 페이지
-            _webDriver.Navigate().GoToUrl(_globalIncomeAddr);
-
-            IsOnServiceTime();
 
 
             // 종합소득 클릭
@@ -211,7 +146,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
 
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
         }
         finally
@@ -219,42 +154,22 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             DefaultContent();
         }
     }
-    
-    void DefaultContent()
-    {
-        try
-        {
-            _webDriver.SwitchTo().DefaultContent();
-        }
-        catch(Exception ex)
-        {
-            _logger.Error(ex);
-        }
-    }
 
-
-    bool IsOnServiceTime()
-    {
-        var elem = _webDriver.FindElement(By.PartialLinkText("서비스 이용시간"));
-        return elem != null;
-    }
     public async Task GoHomeTaxLogin()
     {
         await Task.Run(() =>
         {
             SetDriver();
-            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
-            
+
             _webDriver.Navigate().GoToUrl(_hometaxAddr);
 
             SetBrowserSizeAndPosition();
 
-            IsTemporaryPageThenClick();
+            ClickIfTemporaryPageExist();
 
-            ClosePopups();
             GoSimpleAuth();
-            FillPersonalInfo("신승범", "19860514", "54010186", AuthMethod.Kakao);
             ClosePopups();
+            FillPersonalInfo("신승범", "19860514", "54010186", AuthMethod.Kakao);
 
         });
     }
@@ -264,35 +179,40 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         if (_webDriver is null)
             return;
 
-        await Task.Run((Action)(() =>
+        await Task.Run(() =>
         {
             try
             {
-                AuthRequestConfirm();
-
-                //var authElem = _webDriver.FindElement(By.XPath($"//img[@alt='{authAltName}']"));
-                if (IsElem3(By.XPath("//span[contains(text(),'로그아웃')]"), out IWebElement elem2) == false)
+                AuthRequestConfirmIfNotClicked();
+                if (IsLoggedIn() == false)
                 {
                     MessageBox.Show("로그인 상태가 아닙니다. \n 로그인 완료후 다시 시도해 주세요");
                     return;
                 }
-                // 종합스득세 신고 페이지
-                _webDriver.Navigate().GoToUrl(_globalIncomeAddr);
-                Thread.Sleep(500);
-                // 금융소득 버튼 조회
-                using (new IFrameState(_iframeManager, new() { "txppIframe" }))
-                {
-                    if (IsElem1(By.XPath("//span[contains(text(),'금융소득 조회')]"), out IWebElement elemBtn))
-                        elemBtn.Click();
 
-                    //if (this.IsElem3<IWebElement>(By.XPath("//*[@id=\"textbox8637\"]"), out elem))
-                    //    elem?.Click();
+                if (GoToUrl(_globalIncomeAddr) || IsOnServiceTime() == false)
+                {
+                    MessageBox.Show("서비스 시간이 아닙니다");
+                    return;
                 }
 
+                // 금융소득 조회 버튼 있으면 클릭
+                using (new IFramer(_iframeManager, new() { "txppIframe" }))
+                {
+                    // or By.XPath("//*[@id=\"textbox8637\"]")
+                    if (IsClickable(By.XPath("//span[contains(text(),'금융소득 조회')]"), out var elem))
+                    {
+                        elem.Click();
+                    }
+                    else
+                    {
+                        MessageBox.Show("금융소소득 조회 버튼 오류");
+                        return;
+                    }    
+                }
+
+
                 // popup 
-
-
-
                 string mainWindowHandle = _webDriver.CurrentWindowHandle;
                 var allWindowHandles = _webDriver.WindowHandles;
                 // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
@@ -310,32 +230,163 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     {
                         string message = string.Empty;
                         _webDriver.SwitchTo().Window(popup);
-                        DismissIfAlertExist(popup, ref message);
-                        if (DownloadIfGlobalIncomeExist())
-                            break;
                     }
-                    catch(Exception e)
+                    catch(Exception ex)
                     {
+                        _logger.Error(ex);
+                    }
 
+                    if (DismissIfAlertExist(popup, "없습니다")) // alert: 조회된 데이터가 없습니다.
+                    {
+                        MessageBox.Show("자료가 없습니다");
+                        //return; // for test, temporary
+                    }
+
+                    if (DownloadGlobalIncomeIfExist(popup))
+                    {
+                        MessageBox.Show("자료 다운로드 완료");
+                        return;
                     }
                 }
-                // 다시 기본 창으로 돌아갑니다.
-                //_webDriver.SwitchTo().Window(mainWindowHandle);
-
             }
             catch (Exception e)
             {
+                _logger.Error(e);
                 MessageBox.Show("GoGlobalIncomeTax 오류");
             }
-
-        }));
-
+        });
     }
-    bool DownloadIfGlobalIncomeExist()
-    {
 
+    bool GoToUrl(string url)
+    {
+        var task = Task.Run(() =>
+        {
+            _webDriver.Navigate().GoToUrl(url);
+        });
+        return task.Wait(3000);
+    }
+
+    bool DownloadGlobalIncomeIfExist(string window)
+    {
+        try
+        {
+            if (IsClickable(By.Id("btnExcelDwld"), out var elem))
+                elem.Click(); // downloading...
+            else
+                throw new NotFoundException("btnExcelDwld");
+
+            if (DismissIfAlertExist(window, "없습니다"))
+            {
+                MessageBox.Show("내려 받기할 명세가 없습니다");
+                return false;
+            }
+
+            Process.Start(_downloadDirectory);
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    void DefaultContent()
+    {
+        try
+        {
+            _webDriver.SwitchTo().DefaultContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex);
+        }
+    }
+
+
+    void ClickIfTemporaryPageExist()
+    {
+        try
+        {
+            var elem = _wait1.Until(ExpectedConditions.ElementToBeClickable(By.Id("RD3BOX")));
+            if (elem != null)
+                elem.Click();
+        }
+        catch (Exception ex)
+        {
+            _logger.Info($"ClickIfTemporaryPageExist ({ex})");
+        }
+    }
+
+    bool DismissIfAlertExist(string windowsHandle, string message)
+    {
+        if (DismissIfAlertExist(windowsHandle, ref message))
+            if (message.Contains(message))
+                return true;
         return false;
     }
+
+    bool DismissIfAlertExist(string windowsHandle, ref string message)
+    {
+        try
+        {
+            //Wait for the alert to be displayed
+            _wait1.Until(ExpectedConditions.AlertIsPresent());
+            //Store the alert in a variable
+            IAlert alert = _webDriver.SwitchTo().Alert();
+            //Store the alert in a variable for reuse
+            string text = alert.Text;
+            //Press the Cancel button
+            alert.Dismiss();
+
+            MessageBox.Show($"alert exist: {text}");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    bool IsOnServiceTime()
+    {
+        return IsExist(By.PartialLinkText("서비스 이용시간"), out var elem) == false;
+    }
+    bool IsClickable(By by, out IWebElement elem, int timeout = 2)
+    {
+        elem = null;
+        var wait = new WebDriverWait(new SystemClock(),
+                                    _webDriver,
+                                    TimeSpan.FromSeconds(timeout),
+                                    TimeSpan.FromMilliseconds(200));
+        try
+        {
+            elem = wait.Until(ExpectedConditions.ElementToBeClickable(by));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex);
+            return false;
+        }
+    }
+    bool IsExist(By by, out IWebElement elem, int timeout = 1)
+    {
+        elem = null;
+        var wait = new WebDriverWait(new SystemClock(),
+                                    _webDriver,
+                                    TimeSpan.FromSeconds(timeout),
+                                    TimeSpan.FromMilliseconds(200));
+        try
+        {
+            elem = wait.Until(ExpectedConditions.ElementExists(by));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex);
+            return false;
+        }
+    }
+
 
     void SetBrowserSizeAndPosition()
     {
@@ -395,7 +446,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             if (IsElem3(By.Id("textbox81212912"), out IWebElement elem, 500))
                 elem.Click();
 
-            using (new IFrameState(_iframeManager, new() { "txppIframe" }))
+            using (new IFramer(_iframeManager, new() { "txppIframe" }))
             {
                 Thread.Sleep(200);
                 if (IsElem3(By.Id("anchor14"), out elem, 500))
@@ -444,17 +495,20 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         Samsung
     }
 
-    
-    public void AuthRequestConfirm()
+    public bool IsLoggedIn()
+    {
+        return IsClickable(By.XPath("//span[contains(text(),'로그아웃')]"), out var elem);
+    }
+    public bool AuthRequestConfirmIfNotClicked()
     {
         try
         {
-            using (new IFrameState(_iframeManager, new() { "txppIframe", "UTECMADA02_iframe", "simple_iframeView" }))
+            using (new IFramer(_iframeManager, new() { "txppIframe", "UTECMADA02_iframe", "simple_iframeView" }))
             {
-                if (IsElem1(By.XPath("//button[contains(text(),'인증 완료')]"), out IWebElement elem))
+                if (IsClickable(By.XPath("//button[contains(text(),'인증 완료')]"), out IWebElement elem, 1))
                 {
                     elem.Click();
-                    Thread.Sleep(1000);
+                    return true;
                 }
             }
         }
@@ -462,12 +516,13 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         {
             _logger.Error(e);
         }
+        return false;
     }
     public void FillPersonalInfo(string name, string birth, string phone, AuthMethod method)
     {
         try
         {
-            using (new IFrameState(_iframeManager, new() { "txppIframe", "UTECMADA02_iframe", "simple_iframeView" }))
+            using (new IFramer(_iframeManager, new() { "txppIframe", "UTECMADA02_iframe", "simple_iframeView" }))
             {
                 string nameSelector = "#oacxEmbededContents > div:nth-child(2) > div > div.formLayout > section > form > div.tab-content > div:nth-child(1) > ul > li:nth-child(1) > div.ul-td > input[type=text]";
                 _webDriver.FindElement(By.CssSelector(nameSelector)).SendKeys(name);
