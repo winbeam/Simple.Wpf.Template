@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using NLog;
+using Simple.Wpf.Template;
 using Simple.Wpf.Template.Commands;
 using Simple.Wpf.Template.Extensions;
 using Simple.Wpf.Template.Models;
@@ -13,15 +14,26 @@ using Simple.Wpf.Template.Services.Notifications;
 
 namespace Simple.Wpf.Template.ViewModels;
 
+
+
+//in your command: 
+
 [UsedImplicitly]
+
 public sealed class MainViewModel : DisposableViewModel, IMainViewModel, IRegisteredViewModel
 {
+    private AuthInfo _authInfo = new();
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     private readonly Func<ISettingsViewModel> _settingsFunc;
 
     private ISettingsViewModel _settings;
     private IScrapper _scrapper;
+    public AuthInfo AuthInfo
+    {
+        get { return _authInfo; }
+        set { _authInfo = value; }
+    }
     public MainViewModel(Func<ISettingsViewModel> settingsFunc, 
         INotificationService notificationService,
         IScrapper scrapper,
@@ -29,10 +41,19 @@ public sealed class MainViewModel : DisposableViewModel, IMainViewModel, IRegist
     {
         _settingsFunc = settingsFunc;
         _scrapper = scrapper;
+        _scrapper.AuthInfo = _authInfo;
 
+#if DEBUG
+        _authInfo.Name = "신승범";
+        _authInfo.Phone = "54010186";
+        _authInfo.Birth = "19860514";
+#endif
         var cancellationTokenSource = new CancellationTokenSource();
         Disposable.Create(() => cancellationTokenSource.Cancel())
             .DisposeWith(this);
+
+
+
 
         HomeTaxLoginPageCommand = ReactiveCommand<string>.Create()
             .DisposeWith(this);
@@ -86,6 +107,9 @@ public sealed class MainViewModel : DisposableViewModel, IMainViewModel, IRegist
         SnoozeNotificationCommand.Subscribe(text =>
                 notificationService.ExecuteAsync(NotificationType.MessageWithSnooze, new object[] { text }, cancellationTokenSource.Token))
             .DisposeWith(this);
+
+
+
     }
 
     public IReactiveCommand<string> HomeTaxLoginPageCommand { get; }

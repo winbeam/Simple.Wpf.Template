@@ -16,6 +16,7 @@
                  WindowState="Normal"
                  WindowStartupLocation="CenterScreen"
                  WindowTitleBrush="{StaticResource Simple.Wpf.Template.Brushes.Accent}"
+                 Width="400" Height="350"
                  d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
     <mah:MetroWindow.RightWindowCommands>
@@ -40,30 +41,28 @@
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="4" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="4" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="16" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Column="0"
+        <TextBlock Grid.Column="1"
                        Grid.Row="0"
                        TextWrapping="Wrap"
-                       Text="Home Tax Automation" />
+                       Text="Home Tax Auto (이름, 전화번호, 생년월일)" />
 
-        <ListBox Grid.Row="0" ItemsSource="{Binding FileObjectCollection}" 
-		                    SelectedItem="{Binding SelectedFileObject}"/>
+        <StackPanel Grid.Column="1" >
+            <TextBox Grid.Column="1" Width="150" Text="{Binding AuthInfo.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBox Grid.Column="2" Width="150" Text="{Binding AuthInfo.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBox Grid.Column="3" Width="150" Text="{Binding AuthInfo.Birth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+
 
 
         <StackPanel Grid.Column="0"
@@ -87,52 +86,6 @@
                     HorizontalAlignment="Left"
                     Command="{Binding Path=HomeTaxTestCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
-
-
-
-        </StackPanel>
-
-        <TextBlock Grid.Column="0"
-                   Grid.Row="6"
-                   VerticalAlignment="Top"
-                   TextWrapping="Wrap"
-                   Text="TPL &amp; Rx exceptions are propagated from the Finalizer thread, there will be a delay between clicking the button and it appearing!" />
-
-        <Border Grid.Column="0"
-                Grid.Row="8"
-                Style="{StaticResource Simple.Wpf.Template.Style.Border.HorizontalSeparator}" />
-
-        <TextBlock Grid.Column="0"
-                   Grid.Row="10"
-                   TextWrapping="Wrap"
-                   Text="Windows Notifications - enter some text:" />
-
-        <TextBox x:Name="NotificationText"
-                 Grid.Column="0"
-                 Grid.Row="12"
-                 Width="400"
-                 Height="72"
-                 HorizontalAlignment="Left"
-                 HorizontalContentAlignment="Left"
-                 TextWrapping="Wrap"
-                 Text="Hello World!" />
-
-        <StackPanel Grid.Column="0"
-                    Grid.Row="14"
-                    Orientation="Horizontal">
-
-            <Button Margin="0,0,8,0"
-                    Content="Simple Notification"
-                    HorizontalAlignment="Left"
-                    Command="{Binding Path=SimpleNotificationCommand, Mode=OneWay}"
-                    CommandParameter="{Binding Path=Text, ElementName=NotificationText}" />
-
-            <Button Margin="0,0,8,0"
-                    Content="Snooze Notification"
-                    HorizontalAlignment="Left"
-                    Command="{Binding Path=SnoozeNotificationCommand, Mode=OneWay}"
-                    CommandParameter="{Binding Path=Text, ElementName=NotificationText}" />
-            
         </StackPanel>
     </Grid>
 

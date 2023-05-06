@@ -13,19 +13,13 @@ using NLog;
 using System.Windows;
 using Simple.Wpf.Template.Modules;
 using Simple.Wpf.Template.Helpers;
-using System.Runtime.InteropServices;
 using SeleniumExtras.WaitHelpers;
 using OpenQA.Selenium.Interactions;
 using System.IO;
-using System.Windows.Controls.Primitives;
-using AngleSharp.Dom;
 using System.Diagnostics;
-using Simple.Wpf.Template.Views;
-using System.Reflection;
-using Microsoft.VisualBasic;
-using System.Windows.Interop;
+using Simple.Wpf.Template.Services;
 
-namespace Simple.Wpf.Template.Services;
+namespace Simple.Wpf.Template;
 
 
 [UsedImplicitly]
@@ -63,7 +57,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         });
 
     }
-
+    public AuthInfo AuthInfo { get; set; } = new();
     void SetDriver()
     {
         if (_webDriver != null)
@@ -157,7 +151,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
             GoSimpleAuth();
             ClosePopups();
-            FillPersonalInfo("신승범", "19860514", "54010186", AuthMethod.Kakao);
+            FillPersonalInfo(AuthInfo.Name, AuthInfo.Birth, AuthInfo.Phone, AuthMethod.Kakao);
 
         });
     }

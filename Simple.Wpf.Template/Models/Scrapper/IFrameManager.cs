@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Simple.Wpf.Template.Services;
+namespace Simple.Wpf.Template;
 public class IFramer : IDisposable
 {
     IFrameManager _manager;
