@@ -126,39 +126,19 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
     public void Test()
     {
-
         try
         {
-
-            try
-            {
-                //var aa1 = _webDriver.Manage;
-                //var aa2 = _webDriver.PageSource;
-                //var aa3 = _webDriver.CurrentWindowHandle;
-                //var aa4 = _webDriver.Url;
-                var aa5 = _webDriver.WindowHandles;
-                //var aa6 = _webDriver.Title;
-            }
-            catch { }
-
-
-
-
-            // 종합소득 클릭
-            var paymentPageIframe = _webDriver.FindElement(By.Id("txppIframe"));
-            _webDriver.SwitchTo().Frame(paymentPageIframe);
-            //Thread.Sleep(200);
-            if (this.IsElem3<IWebElement>(By.XPath("//*[@id='textbox8637']"), out IWebElement elem2))
-                elem2?.Click();
-
-
+            //var aa1 = _webDriver.Manage;
+            var pageSource = _webDriver.PageSource;
+            //var aa3 = _webDriver.CurrentWindowHandle;
+            var url = _webDriver.Url;
+            //var aa5 = _webDriver.WindowHandles;
+            var title = _webDriver.Title;
+            _logger.Info($"URL:{url}, TITLE:{title}, PAGE_SOURCE:{pageSource}");
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-        }
-        finally
-        {
-            DefaultContent();
+            _logger.Error(e);
         }
     }
 
