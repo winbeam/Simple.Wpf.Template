@@ -20,6 +20,10 @@ using System.IO;
 using System.Windows.Controls.Primitives;
 using AngleSharp.Dom;
 using System.Diagnostics;
+using Simple.Wpf.Template.Views;
+using System.Reflection;
+using Microsoft.VisualBasic;
+using System.Windows.Interop;
 
 namespace Simple.Wpf.Template.Services;
 
@@ -28,6 +32,7 @@ namespace Simple.Wpf.Template.Services;
 public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IApplicationService
 {
     string _downloadDirectory = @"C:\HomeTaxDownloads";
+    public  const int DefaultWait = 3;
 
     private IWebDriver _webDriver;
     private IFrameManager _iframeManager;
@@ -40,6 +45,8 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     WebDriverWait _wait3;
     WebDriverWait _wait5;
     WebDriverWait _wait4;
+
+    string _mainWindow = string.Empty;
     public Scrapper()
     {
         _logger.Log(NLog.LogLevel.Info, "Scrapper Started");
@@ -89,8 +96,8 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
 
             _webDriver = new ChromeDriver(options);
-            _webDriver.Manage().Timeouts().PageLoad.Add(TimeSpan.FromSeconds(5));
-            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+            _webDriver.Manage().Timeouts().PageLoad.Add(TimeSpan.FromSeconds(DefaultWait));
+            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(DefaultWait);
 
             _iframeManager = new IFrameManager(_webDriver, _logger);
             _logger.Info("Web Driver Started");
@@ -162,6 +169,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             SetDriver();
 
             _webDriver.Navigate().GoToUrl(_hometaxAddr);
+            _mainWindow = _webDriver.CurrentWindowHandle;
 
             SetBrowserSizeAndPosition();
 
@@ -184,17 +192,19 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             try
             {
                 AuthRequestConfirmIfNotClicked();
+
                 if (IsLoggedIn() == false)
                 {
-                    MessageBox.Show("로그인 상태가 아닙니다. \n 로그인 완료후 다시 시도해 주세요");
+                    MsgBox("로그인 상태가 아닙니다. \n 로그인 완료후 다시 시도해 주세요");
                     return;
                 }
 
-                if (GoToUrl(_globalIncomeAddr) || IsOnServiceTime() == false)
+                if (GoToUrl(_globalIncomeAddr) == false || IsOnServiceTime() == false)
                 {
-                    MessageBox.Show("서비스 시간이 아닙니다");
+                    MsgBox("서비스 시간이 아닙니다");
                     return;
                 }
+                 
 
                 // 금융소득 조회 버튼 있으면 클릭
                 using (new IFramer(_iframeManager, new() { "txppIframe" }))
@@ -206,21 +216,21 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     }
                     else
                     {
-                        MessageBox.Show("금융소소득 조회 버튼 오류");
+                        MsgBox("금융소소득 조회 버튼 오류");
                         return;
                     }    
                 }
 
 
                 // popup 
-                string mainWindowHandle = _webDriver.CurrentWindowHandle;
+                _mainWindow = _webDriver.CurrentWindowHandle;
                 var allWindowHandles = _webDriver.WindowHandles;
                 // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
-                var popups = allWindowHandles.Where(handle => handle != mainWindowHandle);
+                var popups = allWindowHandles.Where(handle => handle != _mainWindow);
 
                 if (popups.Any() == false)
                 {
-                    MessageBox.Show("금융소득 조회 팝업 없음");
+                    MsgBox("금융소득 조회 팝업 없음");
                     return;
                 }
                     
@@ -238,23 +248,39 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
                     if (DismissIfAlertExist(popup, "없습니다")) // alert: 조회된 데이터가 없습니다.
                     {
-                        MessageBox.Show("자료가 없습니다");
+                        MsgBox("자료가 없습니다");
                         //return; // for test, temporary
                     }
 
                     if (DownloadGlobalIncomeIfExist(popup))
                     {
-                        MessageBox.Show("자료 다운로드 완료");
-                        return;
+                        if (MessageBox.Show("자료 다운로드 완료\n 다운로드 폴더를 Open 하시겠습니까?", 
+                                            "HomeTaxAuto", 
+                                            MessageBoxButton.YesNo, 
+                                            MessageBoxImage.Information) == MessageBoxResult.Yes)
+                            Process.Start(_downloadDirectory);
+                    }
+                    else
+                    {
+                        MsgBox("내려 받기할 명세가 없습니다");
                     }
                 }
             }
             catch (Exception e)
             {
                 _logger.Error(e);
-                MessageBox.Show("GoGlobalIncomeTax 오류");
+                MsgBox("GoGlobalIncomeTax 오류");
+            }
+            finally
+            {
+                _webDriver.SwitchTo().Window(_mainWindow);
             }
         });
+    }
+
+    void MsgBox(string msg, MessageBoxImage image = MessageBoxImage.Error)
+    {
+        MessageBox.Show(msg, "HomeTaxAuto", MessageBoxButton.OK, image);
     }
 
     bool GoToUrl(string url)
@@ -271,21 +297,26 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         try
         {
             if (IsClickable(By.Id("btnExcelDwld"), out var elem))
-                elem.Click(); // downloading...
-            else
-                throw new NotFoundException("btnExcelDwld");
-
-            if (DismissIfAlertExist(window, "없습니다"))
             {
-                MessageBox.Show("내려 받기할 명세가 없습니다");
+                elem.Click(); // downloading...
+            }
+            else
+            {
+                _logger.Error("not found : btnExcelDwld");
                 return false;
             }
 
-            Process.Start(_downloadDirectory);
+            if (DismissIfAlertExist(window, "없습니다"))
+            {
+                //MsgBox("내려 받기할 명세가 없습니다");
+                return false;
+            }
+
             return true;
         }
         catch (Exception e)
         {
+            _logger.Error(e);
             return false;
         }
     }
@@ -338,7 +369,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             //Press the Cancel button
             alert.Dismiss();
 
-            MessageBox.Show($"alert exist: {text}");
             return true;
         }
         catch
@@ -350,7 +380,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     {
         return IsExist(By.PartialLinkText("서비스 이용시간"), out var elem) == false;
     }
-    bool IsClickable(By by, out IWebElement elem, int timeout = 2)
+    bool IsClickable(By by, out IWebElement elem, int timeout = 2, int sleep = 0)
     {
         elem = null;
         var wait = new WebDriverWait(new SystemClock(),
@@ -360,6 +390,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         try
         {
             elem = wait.Until(ExpectedConditions.ElementToBeClickable(by));
+            Thread.Sleep(sleep);
             return true;
         }
         catch (Exception ex)
@@ -439,28 +470,39 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
         return false;
     }
 
-    public void GoSimpleAuth()
+    public bool GoSimpleAuth()
     {
         try
         {
-            if (IsElem3(By.Id("textbox81212912"), out IWebElement elem, 500))
+            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+            if (IsClickable(By.Id("textbox81212912"), out var elem, 3, 500))
                 elem.Click();
 
             using (new IFramer(_iframeManager, new() { "txppIframe" }))
             {
-                Thread.Sleep(200);
-                if (IsElem3(By.Id("anchor14"), out elem, 500))
-                    elem.Click();
-                if (IsElem3(By.Id("anchor23"), out elem, 500))
-                    elem.Click();
+                if (IsClickable(By.Id("anchor14"), out var elem2, 3, 500))
+                    elem2.Click();
+                if (IsClickable(By.Id("anchor23"), out var elem3, 3, 500))
+                    elem3.Click();
             }
+            return true;
+
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             _logger.Error(e);
+            return false;
+        }
+        finally
+        {
+            SetWait();
         }
     }
 
+    void SetWait(int wait = DefaultWait)
+    {
+        _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(DefaultWait);
+    }
 
     void Tries(Action work, int delay = 500, int tryCount = 2)
     {

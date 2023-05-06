@@ -12,12 +12,18 @@ namespace Simple.Wpf.Template.Services;
 public class IFramer : IDisposable
 {
     IFrameManager _manager;
+    bool _setResult = false;
+    public bool IsSet
+    {
+        get => _setResult;
+    }
+    
     public IFramer(IFrameManager manager, List<string> iframes)
     {
         _manager = manager;
-        _manager.Set(iframes);
+        _setResult = _manager.Set(iframes);
     }
-
+   
     public void Dispose()
     {
         _manager.SwitchToDefault();
@@ -46,6 +52,7 @@ public class IFrameManager
 
         try
         {
+            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(1);
             SwitchToDefault();
             foreach (var iframe in iframes)
             {
@@ -55,16 +62,20 @@ public class IFrameManager
         }
         catch(Exception e)
         {
-            SwitchToDefault();
             _logger.Error(e);
+            SwitchToDefault();
             return false;
+        }
+        finally
+        {
+            _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(Scrapper.DefaultWait);
         }
     }
     public void SwitchToDefault()
     {
         _webDriver.SwitchTo().DefaultContent();
     }
-    bool IsExist(By by, out IWebElement elem, int timeout = 3)
+    bool IsExist(By by, out IWebElement elem, int timeout = 1)
     {
         elem = null;
         try
