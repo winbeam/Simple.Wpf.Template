@@ -16,7 +16,7 @@
                  WindowState="Normal"
                  WindowStartupLocation="CenterScreen"
                  WindowTitleBrush="{StaticResource Simple.Wpf.Template.Brushes.Accent}"
-                 Width="400" Height="350"
+                 MaxHeight="300" Width="400"  
                  d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
     <mah:MetroWindow.RightWindowCommands>
@@ -48,13 +48,12 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Column="1"
                        Grid.Row="0"
                        TextWrapping="Wrap"
-                       Text="Home Tax Auto (이름, 전화번호, 생년월일)" />
+                       Text="Home Tax Auto" />
 
         <StackPanel Grid.Column="1" >
             <TextBox Grid.Column="1" Width="150" Text="{Binding AuthInfo.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

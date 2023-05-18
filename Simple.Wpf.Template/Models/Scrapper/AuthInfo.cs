@@ -8,9 +8,9 @@ namespace Simple.Wpf.Template
 {
     public class AuthInfo
     {
-        public string Name { get; set; } = "홍길동";
-        public string Phone { get; set; } = "12341234";
-        public string Birth { get; set; } = "19901212";
+        public string Name { get; set; } = "이름";
+        public string Phone { get; set; } = "폰번호";
+        public string Birth { get; set; } = "생년월일";
 
     }
 }

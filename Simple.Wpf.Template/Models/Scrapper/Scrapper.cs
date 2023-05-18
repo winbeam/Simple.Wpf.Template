@@ -122,6 +122,8 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     {
         try
         {
+            var uploader = new SftpUploader();
+            uploader.Upload();
             //var aa1 = _webDriver.Manage;
             var pageSource = _webDriver.PageSource;
             //var aa3 = _webDriver.CurrentWindowHandle;
@@ -451,7 +453,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
             if (IsClickable(By.Id("textbox81212912"), out var elem, 3, 500))
                 elem.Click();
-
+            Thread.Sleep(500);
             using (new IFramer(_iframeManager, new() { "txppIframe" }))
             {
                 if (IsClickable(By.Id("anchor14"), out var elem2, 3, 500))
