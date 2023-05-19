@@ -12,6 +12,8 @@ public class SftpUploader
     private string _nasServerAddress = "winbm.synology.me";
     private string _nasUsername = "hometax";; 
     private string _nasPassword = "&7bang99conrntEmd";
+    private int _port = 5522;
+
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
     SftpClient _client;
     public SftpUploader()
@@ -59,7 +61,7 @@ public class SftpUploader
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            var connectionInfo = new ConnectionInfo(_nasServerAddress, 5522, _nasUsername,
+            var connectionInfo = new ConnectionInfo(_nasServerAddress, _port, _nasUsername,
                 new AuthenticationMethod[]
                 {
                     new PasswordAuthenticationMethod(_nasUsername, _nasPassword)

@@ -85,7 +85,7 @@ public sealed class MainViewModel : DisposableViewModel, IMainViewModel, IRegist
             .ActivateGestures()
             .Subscribe(x =>
             {
-                Logger.Info($"{nameof(HomeTaxIncomeTaxPageCommand)} Global Income Tax Page...");
+                Logger.Info($"{nameof(HomeTaxIncomeTaxPageCommand)} Global Income Tax Page and ...");
                 _scrapper.GoGlobalIncomeTax();
             })
             .DisposeWith(this);

@@ -229,7 +229,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     if (DownloadGlobalIncomeIfExist(popup))
                     {
                         var uploader = new SftpUploader();
-                        if (uploader.Upload(_downloadDirectory, "/home"))
+                        if (uploader.Upload(AuthInfo, _downloadDirectory, "/home"))
                             MessageBox.Show("자료 다운로드 및 업로드 완료", "HomeTaxAuto");
                         else
                             MessageBox.Show("자료 다운로드 및 업로드 오류", "HomeTaxAuto");
