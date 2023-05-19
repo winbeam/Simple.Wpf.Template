@@ -122,8 +122,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
     {
         try
         {
-            var uploader = new SftpUploader();
-            uploader.Upload();
             //var aa1 = _webDriver.Manage;
             var pageSource = _webDriver.PageSource;
             //var aa3 = _webDriver.CurrentWindowHandle;
@@ -230,11 +228,13 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
                     if (DownloadGlobalIncomeIfExist(popup))
                     {
-                        if (MessageBox.Show("자료 다운로드 완료\n 다운로드 폴더를 Open 하시겠습니까?", 
-                                            "HomeTaxAuto", 
-                                            MessageBoxButton.YesNo, 
-                                            MessageBoxImage.Information) == MessageBoxResult.Yes)
-                            Process.Start(_downloadDirectory);
+                        var uploader = new SftpUploader();
+                        if (uploader.Upload(_downloadDirectory, "/home"))
+                            MessageBox.Show("자료 다운로드 및 업로드 완료", "HomeTaxAuto");
+                        else
+                            MessageBox.Show("자료 다운로드 및 업로드 오류", "HomeTaxAuto");
+                        //Process.Start(_downloadDirectory); // open download diretory
+
                     }
                     else
                     {
