@@ -10,7 +10,7 @@ using Simple.Wpf.Template;
 public class SftpUploader
 {
     private string _nasServerAddress = "winbm.synology.me";
-    private string _nasUsername = "hometax";; 
+    private string _nasUsername = "hometax"; 
     private string _nasPassword = "&7bang99conrntEmd";
     private int _port = 5522;
 

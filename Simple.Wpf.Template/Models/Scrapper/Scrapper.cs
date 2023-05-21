@@ -18,6 +18,8 @@ using OpenQA.Selenium.Interactions;
 using System.IO;
 using System.Diagnostics;
 using Simple.Wpf.Template.Services;
+using OpenQA.Selenium.Support.Extensions;
+using System.CodeDom.Compiler;
 
 namespace Simple.Wpf.Template;
 
@@ -74,7 +76,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             var options = new ChromeOptions();
             //options.AddArguments("--disable-extensions");
             options.AddUserProfilePreference("download.default_directory", _downloadDirectory);
-
             // ChromeOptions에서 설정한 값을 읽어오기
             //var arguments = options.Arguments.ToList();
             //var prefs = options.ToCapabilities().GetCapability("goog:chromeOptions");
@@ -92,7 +93,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             _webDriver = new ChromeDriver(options);
             _webDriver.Manage().Timeouts().PageLoad.Add(TimeSpan.FromSeconds(DefaultWait));
             _webDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(DefaultWait);
-
+            //_webDriver.Manage().Window.Minimize();
             _iframeManager = new IFrameManager(_webDriver, _logger);
             _logger.Info("Web Driver Started");
 
@@ -169,7 +170,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
                 if (IsLoggedIn() == false)
                 {
-                    MsgBox("로그인 상태가 아닙니다. \n 로그인 완료후 다시 시도해 주세요");
+                    MsgBox("로그인 상태가 아닙니다. \n 로그인 완료 후 다시 시도해 주세요");
                     return;
                 }
 
@@ -183,10 +184,13 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                 // 금융소득 조회 버튼 있으면 클릭
                 using (new IFramer(_iframeManager, new() { "txppIframe" }))
                 {
-                    // or By.XPath("//*[@id=\"textbox8637\"]")
-                    if (IsClickable(By.XPath("//span[contains(text(),'금융소득 조회')]"), out var elem))
+                    //if (IsClickable(By.XPath("//span[contains(text(),'금융소득 조회')]"), out var elem))
+                    if (IsClickable(By.Id("group14455"), out var elem))
                     {
-                        elem.Click();
+                        IWebElement btn = _webDriver.FindElement(By.Id("group14455"));
+                        IJavaScriptExecutor javascriptExecutor = (IJavaScriptExecutor)_webDriver;
+                        javascriptExecutor.ExecuteScript("arguments[0].click();", btn);
+                        //elem.Click();
                     }
                     else
                     {
@@ -230,9 +234,15 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     {
                         var uploader = new SftpUploader();
                         if (uploader.Upload(AuthInfo, _downloadDirectory, "/home"))
+                        {
+                            Thread.Sleep(500);
+                            DeleteAllFilesInFolder(_downloadDirectory);
                             MessageBox.Show("자료 다운로드 및 업로드 완료", "HomeTaxAuto");
+                        }
                         else
+                        {
                             MessageBox.Show("자료 다운로드 및 업로드 오류", "HomeTaxAuto");
+                        }
                         //Process.Start(_downloadDirectory); // open download diretory
 
                     }
@@ -252,6 +262,37 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                 _webDriver.SwitchTo().Window(_mainWindow);
             }
         });
+    }
+
+    void DeleteAllFilesInFolder(string folderPath)
+    {
+        try
+        {
+            DirectoryInfo directory = new DirectoryInfo(folderPath);
+
+            // 폴더가 존재하는지 확인
+            if (directory.Exists)
+            {
+                // 폴더 내 모든 파일을 가져옴
+                FileInfo[] files = directory.GetFiles();
+
+                foreach (FileInfo file in files)
+                {
+                    // 파일 삭제
+                    file.Delete();
+                }
+
+                _logger.Info("모든 파일 삭제가 완료되었습니다.");
+            }
+            else
+            {
+                _logger.Warn("지정된 폴더가 존재하지 않습니다.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("오류가 발생했습니다: " + ex.Message);
+        }
     }
 
     void MsgBox(string msg, MessageBoxImage image = MessageBoxImage.Error)
