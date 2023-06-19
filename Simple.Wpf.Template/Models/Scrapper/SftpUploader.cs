@@ -49,10 +49,11 @@ public class SftpUploader
 
 
     // ex:UploadFileToNas(@"C:\Users\winbe\pw.txt", "/home/xx");
-    public bool Upload(AuthInfo authInfo, string folderPath, string remoteFolderPath)
+    public bool Upload(AuthInfo authInfo, string folderPath, string remoteFolderPath, out string result)
     {
         try
         {
+            var fileNames = new List<string>();
             var date = DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss");
 
             var files = FilesInFolder(folderPath);
@@ -74,6 +75,7 @@ public class SftpUploader
                 foreach(var file in files)
                 {
                     var name = Path.GetFileName(file);
+                    fileNames.Add(name);
                     var remoteFileFullPath = $"{remoteFolderPath}/{date}_{authInfo.Name}_{authInfo.Birth}_{authInfo.Phone}_{name}";
                     using (var fileStream = new FileStream(file, FileMode.Open))
                     {
@@ -85,11 +87,13 @@ public class SftpUploader
             }
 
             stopwatch.Stop();
-            _logger.Info($"Upload 완료 ({string.Join(",", files)}) (elapsed: {stopwatch.Elapsed})");
+            result = $"Upload 완료 ({string.Join(",", files)}) (elapsed: {stopwatch.Elapsed})";
+            _logger.Info(result);
             return true;
         }
         catch (Exception ex)
         {
+            result = "Upload Error";
             _logger.Error(ex);
         }
         return false;

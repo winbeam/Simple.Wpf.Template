@@ -3,8 +3,10 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AngleSharp.Browser;
 using JetBrains.Annotations;
 using NLog;
+using OpenQA.Selenium;
 using Simple.Wpf.Template;
 using Simple.Wpf.Template.Commands;
 using Simple.Wpf.Template.Extensions;
@@ -34,6 +36,10 @@ public sealed class MainViewModel : DisposableViewModel, IMainViewModel, IRegist
         get { return _authInfo; }
         set { _authInfo = value; }
     }
+
+    public bool IsLoggedIn { get; set; } = true;
+    public bool CanIncomeTaxPage { get; set; } = false;
+
     public MainViewModel(Func<ISettingsViewModel> settingsFunc, 
         INotificationService notificationService,
         IScrapper scrapper,
@@ -51,9 +57,6 @@ public sealed class MainViewModel : DisposableViewModel, IMainViewModel, IRegist
         var cancellationTokenSource = new CancellationTokenSource();
         Disposable.Create(() => cancellationTokenSource.Cancel())
             .DisposeWith(this);
-
-
-
 
         HomeTaxLoginPageCommand = ReactiveCommand<string>.Create()
             .DisposeWith(this);

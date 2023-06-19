@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Simple.Wpf.Template.Services;
 using OpenQA.Selenium.Support.Extensions;
 using System.CodeDom.Compiler;
+using AngleSharp.Dom;
 
 namespace Simple.Wpf.Template;
 
@@ -75,6 +76,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             Directory.CreateDirectory(_downloadDirectory);
             var options = new ChromeOptions();
             //options.AddArguments("--disable-extensions");
+            options.AddArguments("--headless");
             options.AddUserProfilePreference("download.default_directory", _downloadDirectory);
             // ChromeOptions에서 설정한 값을 읽어오기
             //var arguments = options.Arguments.ToList();
@@ -105,7 +107,6 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
             _wait4 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(4), interval);
             _wait5 = new WebDriverWait(clock, _webDriver, TimeSpan.FromSeconds(5), interval);
 
-
         }
         catch (WebDriverException ex)
         {
@@ -119,17 +120,122 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
 
     }
 
+    void Click(IWebElement elem)
+    {
+        IJavaScriptExecutor javascriptExecutor = (IJavaScriptExecutor)_webDriver;
+        javascriptExecutor.ExecuteScript("arguments[0].click();", elem);
+    }
+
     public void Test()
     {
         try
         {
+
+            var uploader = new SftpUploader();
+            if (uploader.Upload(AuthInfo, _downloadDirectory, "/home", out string result))
+            {
+                Thread.Sleep(500);
+                DeleteAllFilesInFolder(_downloadDirectory);
+                MessageBox.Show("자료 다운로드 및 업로드 완료", "HomeTaxAuto");
+            }
+            else
+            {
+                MessageBox.Show("자료 다운로드 및 업로드 오류", "HomeTaxAuto");
+            }
+
+
+
+            if (GoToUrl(_globalIncomeAddr) == false || IsOnServiceTime() == false)
+            {
+                MsgBox("서비스 시간이 아닙니다");
+                return;
+            }
+
+            // 금융소득 조회 버튼 있으면 클릭
+            using (new IFramer(_iframeManager, new() { "txppIframe" }))
+            {
+                //if (IsClickable(By.XPath("//span[contains(text(),'금융소득 조회')]"), out var elem))
+                if (IsClickable(By.Id("group255371"), out var elem))
+                {
+                    // ref : https://stackoverflow.com/questions/61393771/element-click-intercepted-exception
+                    IWebElement btn = _webDriver.FindElement(By.Id("group255371"));
+                    Click(btn);
+                    //elem.Click();
+                }
+                else
+                {
+                    MsgBox("금융소소득 조회 버튼 오류");
+                    return;
+                }
+            }
+            // popup 
+            _mainWindow = _webDriver.CurrentWindowHandle;
+            var allWindowHandles = _webDriver.WindowHandles;
+            // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
+            var popups = allWindowHandles.Where(handle => handle != _mainWindow);
+
+            if (popups.Any() == false)
+            {
+                MsgBox("금융소득 조회 팝업 없음");
+                return;
+            }
+
+            foreach (string popup in popups)
+            {
+                try
+                {
+                    string message = string.Empty;
+                    _webDriver.SwitchTo().Window(popup);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex);
+                }
+                // 신고도움 자료가 제공되지 않더라도 실제 종합소득금액이 있는 경우 신고대상 여부를 
+                // 판단하여 자진 신고하여야 합니다. 
+                DismissIfAlertExist(popup, "");
+
+                // value="출력하기"
+                if (IsClickable(By.Id("trigger27"), out var elem) == false)
+                {
+                    continue; // btn not exist window
+                }
+                Click(elem);
+
+
+
+
+
+                //var pageSource = _webDriver.PageSource;
+                //File.WriteAllText($"{_webDriver.Title}.html", pageSource.ToString());
+                var curWindow = _webDriver.CurrentWindowHandle;
+                allWindowHandles = _webDriver.WindowHandles;
+
+                // 현재 활성 창 핸들러를 제외한 나머지 창 핸들러를 가져옵니다.
+                var popups2 = allWindowHandles.Where(handle => handle != _mainWindow 
+                                                            && handle != _webDriver.CurrentWindowHandle);
+                foreach(var popup2 in popups2)
+                {
+
+                    // title="인쇄"
+                    if (IsClickable(By.Id("re_printc16874c3afd014162b9b15f5e473ae7dfrpt6"), out var elem2) == false)
+                    {
+                        continue; // btn not exist window
+                    }
+                    Click(elem2);
+                }
+            }
+
+
+
+
+
             //var aa1 = _webDriver.Manage;
-            var pageSource = _webDriver.PageSource;
             //var aa3 = _webDriver.CurrentWindowHandle;
             var url = _webDriver.Url;
             //var aa5 = _webDriver.WindowHandles;
             var title = _webDriver.Title;
-            _logger.Info($"URL:{url}, TITLE:{title}, PAGE_SOURCE:{pageSource}");
+            //_logger.Info($"URL:{url}, TITLE:{title}, PAGE_SOURCE:{pageSource}");
         }
         catch (Exception e)
         {
@@ -187,6 +293,7 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     //if (IsClickable(By.XPath("//span[contains(text(),'금융소득 조회')]"), out var elem))
                     if (IsClickable(By.Id("group14455"), out var elem))
                     {
+                        // ref : https://stackoverflow.com/questions/61393771/element-click-intercepted-exception
                         IWebElement btn = _webDriver.FindElement(By.Id("group14455"));
                         IJavaScriptExecutor javascriptExecutor = (IJavaScriptExecutor)_webDriver;
                         javascriptExecutor.ExecuteScript("arguments[0].click();", btn);
@@ -233,15 +340,15 @@ public sealed class Scrapper : BaseModule, IScrapper, IRegisteredService //, IAp
                     if (DownloadGlobalIncomeIfExist(popup))
                     {
                         var uploader = new SftpUploader();
-                        if (uploader.Upload(AuthInfo, _downloadDirectory, "/home"))
+                        if (uploader.Upload(AuthInfo, _downloadDirectory, "/home", out string result))
                         {
                             Thread.Sleep(500);
                             DeleteAllFilesInFolder(_downloadDirectory);
-                            MessageBox.Show("자료 다운로드 및 업로드 완료", "HomeTaxAuto");
+                            MessageBox.Show(result, "자료 다운로드 및 업로드 완료");
                         }
                         else
                         {
-                            MessageBox.Show("자료 다운로드 및 업로드 오류", "HomeTaxAuto");
+                            MessageBox.Show(result, "자료 다운로드 및 업로드 오류");
                         }
                         //Process.Start(_downloadDirectory); // open download diretory
 

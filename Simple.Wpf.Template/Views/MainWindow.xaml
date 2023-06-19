@@ -37,52 +37,65 @@
         </mah:FlyoutsControl>
     </mah:MetroWindow.Flyouts>
 
-    <Grid Margin="8">
+    <Grid Margin="10">
 
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="30" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
-        <TextBlock Grid.Column="1"
-                       Grid.Row="0"
-                       TextWrapping="Wrap"
+        
+        <TextBlock Grid.Column="0" Grid.Row="0"
                        Text="Home Tax Auto" />
-
-        <StackPanel Grid.Column="1" >
-            <TextBox Grid.Column="1" Width="150" Text="{Binding AuthInfo.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-            <TextBox Grid.Column="2" Width="150" Text="{Binding AuthInfo.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-            <TextBox Grid.Column="3" Width="150" Text="{Binding AuthInfo.Birth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        <StackPanel Grid.Row="1">
+            <DockPanel>
+                <TextBlock Text="이름" Margin="3" VerticalAlignment="Center"></TextBlock>
+                <TextBox DockPanel.Dock="Right" Width="150" HorizontalAlignment="Left" 
+                     Text="{Binding AuthInfo.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="54, 3, 3, 3">
+                </TextBox>
+            </DockPanel>
+            <DockPanel>
+                <TextBlock Text="휴대폰 번호" Margin="3" VerticalAlignment="Center"></TextBlock>
+                <TextBox DockPanel.Dock="Right" Width="150" HorizontalAlignment="Left" 
+                     Text="{Binding AuthInfo.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="14, 3, 3, 3">
+                </TextBox>
+            </DockPanel>
+            <DockPanel>
+                <TextBlock Text="생년월일" Margin="3" VerticalAlignment="Center"></TextBlock>
+                <TextBox DockPanel.Dock="Right" Width="150" HorizontalAlignment="Left" 
+                     Text="{Binding AuthInfo.Birth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="30, 3, 3, 3">
+                </TextBox>
+            </DockPanel>
         </StackPanel>
 
 
 
 
-        <StackPanel Grid.Column="0"
-                    Grid.Row="4"
+        <StackPanel Grid.Column="0" Grid.Row="2" Margin="15"
                     Orientation="Horizontal">
 
             <Button Margin="0,0,8,0"
                     Content="1. HomeTax Login Page"
                     HorizontalAlignment="Left"
+                    IsEnabled="{Binding IsLoggedIn}"
                     Command="{Binding Path=HomeTaxLoginPageCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
 
             <Button Margin="0,0,8,0"
                     Content="2. Income Tax Page"
                     HorizontalAlignment="Left"
+                    IsEnabled="{Binding IsLoggedIn}"
                     Command="{Binding Path=HomeTaxIncomeTaxPageCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
 
             <Button Margin="0,0,8,0"
                     Content="Test"
                     HorizontalAlignment="Left"
+                    
                     Command="{Binding Path=HomeTaxTestCommand, Mode=OneWay}"
                     CommandParameter="{Binding Path=Text, ElementName=ExceptionText}" />
         </StackPanel>
